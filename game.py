@@ -37,27 +37,41 @@ class Player():
     def Talk(self):
         pass
 
-# here comes arslan
-PLAYER = Player(AI=False)
 
 def InitGame():
 
     global TABLE
-    global PREFLOP_FLAG
-    global FLOP_FLAG
-    global POOL
     TABLE = []
+
+    global PREFLOP_FLAG
     PREFLOP_FLAG = False
+
+    global FLOP_FLAG
     FLOP_FLAG = False
+
+    global POOL
     POOL = 0
 
-    random.shuffle(RawCards)
+    global PLAYER
+    PLAYER = Player(AI=False)
+
+    def Shuffle():
+        num_list = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
+        suit_list = ['s', 'h', 'c', 'd']
+        RawCards = [x + y for x in num_list for y in suit_list]
+        # once is enough yeah but
+        random.shuffle(RawCards)
+        random.shuffle(RawCards)
+        random.shuffle(RawCards)
+        return RawCards
+
+    global RawCards
+    RawCards = Shuffle()
 
 
 def MakeUpPlayers(num: int=5):
     '''
-    :TODO: random order for everyone, decide who is SB/BB
-    or, fixed position but randomly distribute to players
+    :TODO: randomly decide who is SB/BB/...
     0 - SB
     1 - BB
     2 - UTG
