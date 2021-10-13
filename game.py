@@ -1,3 +1,6 @@
+# __author__: arslan
+# __date__: 2021/10/11
+
 import random
 from typing import Protocol
 
