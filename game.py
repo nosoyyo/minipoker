@@ -4,10 +4,12 @@
 import time
 import random
 from typing import List
-
 from thpoker.core import Hand, Table, Combo, Cards
-#from exceptions import *
 
+from exceptions import *
+from utils import CORPUS, AI_NAMES
+
+#TODO stuff about nuts: powercheck & talk
 
 class Pool:
 
@@ -35,31 +37,25 @@ class Player():
         self.AI = AI
         self.hand = []
         self.cash = cash
+        self.is_SB = False
+        self.is_BB = False
 
     def __repr__(self) -> str:
         return f'<玩家：{self.name}>'
 
-    def Draw(self):
-        global DEBUG
-        self.hand.append(RawCards.pop())
-        self.hand.append(RawCards.pop())
-        self.Combo()
-        if DEBUG:
-            print(f'{self.name}的手牌：{self.ShowHand()}\n')
-    
     def ShowHand(self) -> Hand:
         string = ''
         for i in range(len(self.hand)):
             string += self.hand[i] + '/'
         return(Hand(string))
 
-    def Bet(self, bet) -> Pool:
+    def Bet(self, bet, game) -> Pool:
         if self.cash < bet:
             raise OverBetError(f'不能下这些，你只有{self.cash}了')
         else:
             self.cash -= bet
-            POOL.Add(self.name, bet)
-        return POOL
+            game.POOL.Add(self.name, bet)
+        return game.POOL
 
     def Talk(self, command, p=None):
         time.sleep(1)
@@ -78,46 +74,62 @@ class Player():
             word = f'{trash}{p.name}'
         print(f'{self.name}：{word}')
 
-    def Combo(self) -> Combo:
-        global TABLE
-        global DEBUG
-        self.combo = Combo(hand=self.ShowHand(), table=ShowHand(TABLE))
-        if DEBUG:
+    def Combo(self, game) -> Combo:
+        self.combo = Combo(hand=self.ShowHand(), table=ShowHand(game.TABLE))
+        if game.DEBUG:
             print(f'{self.name}的combo：{self.combo}')
         return self.combo
 
     def PowerCheck(self):
         # flush check
         # ace check
+        # TODO
         return 50
     
-    def ChooseOpponent(self):
-        opponent = random.choice(PLAYERS)
+    def ChooseOpponent(self, game):
+        opponent = random.choice(game.PLAYERS)
         if opponent.name == self.name:
-            opponent = self.ChooseOpponent()
+            opponent = self.ChooseOpponent(game)
         return opponent
 
-    def Decide(self):
-        global LASTBET
-
+    def Decide(self, game):
         print(f'{self.name}正在决策...')
         time.sleep(random.random()+2)
 
         # power = self.PowerCheck() #TODO
         power = int(random.random() * 100)
-        if power < 20:
+        if self.cash <= game.LASTBET:
+            pass
+        elif power < 20:
             self.Talk('fold')
+            self.Fold(game)
         elif 20 <= power < 50:
             self.Talk('call')
-            bet = LASTBET
+            bet = game.LASTBET
+            self.Bet(bet, game)
         elif 50 <= power < 90:
             self.Talk('raise')
-            bet  = SB * (int(random.random()*10) + 1)
-            self.Bet(bet)
+            bet  = game.SB * (int(random.random()*4) + 1) + game.LASTBET
+            if bet >= self.cash:
+                self.AllIn(game)
+            else:
+                game.LASTBET = bet
+                self.Bet(bet, game)
         elif power >= 90:
-            self.Talk('allin')
-            bet = self.Bet(self.cash)
-        self.Bet(SB)
+            self.AllIn(game)
+
+    def AllIn(self, game):
+        self.Talk('allin')
+        bet = self.cash
+        self.Bet(bet, game)
+        game.LASTBET = bet
+
+    def Fold(self, game):
+        for i in range(len(game.PLAYERS)+1):
+            if self.name == game.PLAYERS[i].name:
+                game.PLAYERS.pop(i)
+                print(f'{self.name}离开牌桌，还剩{len(game.PLAYERS)}家\n')
+                break
 
 
 class Game():
@@ -140,10 +152,14 @@ class Game():
         self.PLAYERS = self.AI + [self.PLAYER]
         random.shuffle(self.PLAYERS)
 
+        # distribute positions
+        self.PLAYERS[0].is_SB = True
+        self.PLAYERS[1].is_BB = True
+
         # init trash talk phase
         for p in self.PLAYERS:
             q = random.random()
-            opponent = p.ChooseOpponent()
+            opponent = p.ChooseOpponent(self)
             if q > 0.7:
                 p.Talk('trash', p=opponent)
 
@@ -157,7 +173,6 @@ class Game():
         5 - BT
         '''
         self.AI = []
-        AI_NAMES = ['云师','jimmy仔','修师','范师','西米','铁锤','Zakk','胡哥','六爷','莎翁',]
         random.shuffle(AI_NAMES)
         result = AI_NAMES[:n_AI]
         result = list(map(lambda x: Player(name=x, cash=cash), result))
@@ -174,43 +189,48 @@ class Game():
         random.shuffle(RawCards)
         random.shuffle(RawCards)
         return RawCards
-    
+
+    def Deal(self, player):
+        card1 = self.RawCards.pop()
+        card2 = self.RawCards.pop()
+        if self.DEBUG:
+            print(f'给{player.name}发了一张{card1}')
+            print(f'给{player.name}发了一张{card2}\n')
+        player.hand.append(card1)
+        player.hand.append(card2)
+ 
     def Preflop(self):
+        print('\nPreflop阶段\n')
         if not self.PREFLOP_FLAG:
             for i in range(len(self.PLAYERS)):
-                self.PLAYERS[i].Draw()
+                self.Deal(self.PLAYERS[i])
             self.PREFLOP_FLAG = True
             return
         else:
             print('already PREFLOP!')
 
     def Flop(self):
+        print('\nFlop阶段\n')
         if not self.FLOP_FLAG:
             self.TABLE.append(self.RawCards.pop())
             self.TABLE.append(self.RawCards.pop())
             self.TABLE.append(self.RawCards.pop())
-
             ShowHand(self.TABLE)
-
             for i in range(len(self.PLAYERS)):
-                self.PLAYERS[i].Combo()
-
+                self.PLAYERS[i].Combo(self)
             self.FLOP_FLAG = True
-
         else:
             raise AlreadyFlopError('already FLOP!!')
         print(f'current TABLE: {self.TABLE}\n')
 
     def Turn(self):
+        print('\n转牌圈\n')
 
         if not self.TURN_FLAG:
             self.TABLE.append(self.RawCards.pop())
-
             ShowHand(self.TABLE)
-
             for i in range(len(self.PLAYERS)):
-                self.PLAYERS[i].Combo()
-            
+                self.PLAYERS[i].Combo(self)          
             self.TURN_FLAG = True
 
         else:
@@ -218,15 +238,13 @@ class Game():
         print(f'current TABLE: {self.TABLE}\n')
 
     def River(self):
+        print('\n河牌圈\n')
 
         if not self.RIVER_FLAG:
             self.TABLE.append(self.RawCards.pop())
-
             ShowHand(self.TABLE)
-
             for i in range(len(self.PLAYERS)):
-                self.PLAYERS[i].Combo()
-
+                self.PLAYERS[i].Combo(self)
             self.RIVER_FLAG = True
             return self.TABLE
         else:
@@ -247,28 +265,28 @@ def main():
 
     game = Game()
 
-    global POOL
-    # check SB
-    print()
-    if game.PLAYERS[0].AI:
-        POOL = game.PLAYERS[0].Bet(game.SB)
-    else:   
-        POOL = game.PLAYER.Bet(game.SB)
-
-    # check BB
-    if game.PLAYERS[1].AI:
-        POOL = game.PLAYERS[1].Bet(game.SB*2)
-    else:   
-        POOL = game.PLAYER.Bet(game.SB*2)
-
     # Preflop
     game.Preflop()
-    for i in range(2, 6):
-        game.PLAYERS[i].Decide()
-    print(f'你的手牌：{game.PLAYER.ShowHand()}\n',)
+
+    for p in game.PLAYERS:
+        if p.is_SB:
+            game.POOL = p.Bet(game.SB, game)
+        elif p.is_BB:
+            game.POOL = p.Bet(game.BB, game)
+        else:
+            p.Decide(game)
 
     # Flop
     game.Flop()
-    for i in range(0, 6):
-        game.PLAYERS[i].Decide()
-    print(f'你的手牌：{game.PLAYER.ShowHand()}\n',)
+    for p in game.PLAYERS:
+        p.Decide(game)
+    
+    # Turn
+    game.Turn()
+    for p in game.PLAYERS:
+        p.Decide(game)
+
+    # River
+    game.River()
+    for p in game.PLAYERS:
+        p.Decide(game)
