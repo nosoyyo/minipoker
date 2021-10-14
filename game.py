@@ -1,5 +1,5 @@
-# __author__: arslan
-# __date__: 2021/10/11
+# __author__ = arslan
+# __date__ = 2021/10/11
 
 import random
 
@@ -24,9 +24,10 @@ class Player():
         return f'<玩家：{self.name}>'
 
     def Draw(self):
-        self.hand.append(RawCards.pop())
-        self.hand.append(RawCards.pop())
         global DEBUG
+        self.hand.append(RawCards.pop())
+        self.hand.append(RawCards.pop())
+        self.Combo()
         if DEBUG:
             self.ShowHand()
     
@@ -34,7 +35,7 @@ class Player():
         string = ''
         for i in range(len(self.hand)):
             string += self.hand[i] + '/'
-        print(Hand(string))
+        return(Hand(string))
 
     def Bet(self, bet, pool):
         if self.cash < bet:
@@ -46,6 +47,14 @@ class Player():
 
     def Talk(self):
         pass
+
+    def Combo(self):
+        global TABLE
+        global DEBUG
+        self.combo = Combo(hand=self.ShowHand(), table=ShowHand(TABLE))
+        if DEBUG:
+            print(self.combo)
+        return self.combo
 
 
 def MakeUpPlayers(num: int=5):
@@ -83,6 +92,16 @@ def Shuffle():
     random.shuffle(RawCards)
     random.shuffle(RawCards)
     return RawCards
+
+
+def ShowHand(slashstring):
+    '''
+    :slashstring: e.g. like '6d/As/Th' in TABLE
+    '''
+    string = ''
+    for i in range(len(slashstring)):
+        string += slashstring[i] + '/'
+    return(Table(string[:-1]))
 
 
 def InitGame():
@@ -126,15 +145,6 @@ def Preflop():
         print('already PREFLOP!')
 
 
-def ShowHand(slashstring):
-    '''
-    :slashstring: e.g. like '6d/As/Th' in TABLE
-    '''
-    string = ''
-    for i in range(len(slashstring)):
-        string += slashstring[i] + '/'
-    return(Table(string[:-1]))
-
 def Flop():
     global FLOP_FLAG
     global TABLE
@@ -144,6 +154,9 @@ def Flop():
         TABLE.append(RawCards.pop())
 
         ShowHand(TABLE)
+
+        for i in range(len(PLAYERS)):
+            PLAYERS[i].Combo()
 
         FLOP_FLAG = True
         return TABLE
@@ -157,7 +170,12 @@ def Turn():
     global TABLE
     if not TURN_FLAG:
         TABLE.append(RawCards.pop())
+
         ShowHand(TABLE)
+
+        for i in range(len(PLAYERS)):
+            PLAYERS[i].Combo()
+        
         TURN_FLAG = True
         return TABLE
     else:
@@ -170,7 +188,12 @@ def River():
     global TABLE
     if not RIVER_FLAG:
         TABLE.append(RawCards.pop())
+
         ShowHand(TABLE)
+
+        for i in range(len(PLAYERS)):
+            PLAYERS[i].Combo()
+
         RIVER_FLAG = True
         return TABLE
     else:
