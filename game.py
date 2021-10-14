@@ -96,6 +96,12 @@ def InitGame():
     global FLOP_FLAG
     FLOP_FLAG = False
 
+    global TURN_FLAG
+    TURN_FLAG = False
+
+    global RIVER_FLAG
+    RIVER_FLAG = False
+
     global POOL
     POOL = 0
 
@@ -120,15 +126,53 @@ def Preflop():
         print('already PREFLOP!')
 
 
+def ShowHand(slashstring):
+    '''
+    :slashstring: e.g. like '6d/As/Th' in TABLE
+    '''
+    string = ''
+    for i in range(len(slashstring)):
+        string += slashstring[i] + '/'
+    return(Table(string[:-1]))
+
 def Flop():
     global FLOP_FLAG
     global TABLE
     if not FLOP_FLAG:
-        TABLE = Table(f'{RawCards.pop()}/{RawCards.pop()}/{RawCards.pop()}')
+        TABLE.append(RawCards.pop())
+        TABLE.append(RawCards.pop())
+        TABLE.append(RawCards.pop())
+
+        ShowHand(TABLE)
+
         FLOP_FLAG = True
         return TABLE
     else:
-        raise AlreadyFloppedError('already FLOPPED!!')
+        raise AlreadyFlopError('already FLOP!!')
     print(f'current TABLE: {TABLE}')
 
-    
+
+def Turn():
+    global TURN_FLAG
+    global TABLE
+    if not TURN_FLAG:
+        TABLE.append(RawCards.pop())
+        ShowHand(TABLE)
+        TURN_FLAG = True
+        return TABLE
+    else:
+        raise AlreadyTurnError('already TURN!!')
+    print(f'current TABLE: {TABLE}')
+
+
+def River():
+    global RIVER_FLAG
+    global TABLE
+    if not RIVER_FLAG:
+        TABLE.append(RawCards.pop())
+        ShowHand(TABLE)
+        RIVER_FLAG = True
+        return TABLE
+    else:
+        raise AlreadyRiverError('already RIVER!!')
+    print(f'current TABLE: {TABLE}')
