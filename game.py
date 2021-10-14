@@ -145,7 +145,7 @@ class Game():
             q = random.random()
             opponent = p.ChooseOpponent()
             if q > 0.7:
-                p.Talk('trash',p=opponent)
+                p.Talk('trash', p=opponent)
 
     def MakeUpAI(self, n_AI, cash):
         '''
