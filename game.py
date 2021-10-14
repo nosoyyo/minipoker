@@ -6,7 +6,7 @@ from typing import List
 
 from thpoker.core import Hand, Table, Combo, Cards
 #from exceptions import *
-#from utils import DEBUG, Shuffle
+#from utils import DEBUG, Shuffle, CORPUS
 
 
 
@@ -54,7 +54,7 @@ class Player():
             string += self.hand[i] + '/'
         return(Hand(string))
 
-    def Bet(self, bet, POOL) -> Pool:
+    def Bet(self, bet) -> Pool:
         if self.cash < bet:
             raise OverBetError(f'不能下这些，你只有{self.cash}了')
         else:
@@ -63,7 +63,17 @@ class Player():
         return POOL
 
     def Talk(self, command):
-        pass
+        if command == 'fold':
+            word = random.choice(CORPUS[FOLD])            
+        elif command == 'check':
+            word = random.choice(CORPUS[CHECK])
+        elif command == 'call':
+            word = random.choice(CORPUS[CALL])
+        elif command == 'raise':
+            word = random.choice(CORPUS[RAISE])
+        elif command == 'allin':
+            word = random.choice(CORPUS[ALLIN])
+        print(f'{self.name}：{word}')
 
     def Combo(self) -> Combo:
         global TABLE
@@ -79,20 +89,22 @@ class Player():
         return 50
     
     def Decide(self):
+        if DEBUG:
+            print(f'{self.name}正在决策...')
         # power = self.PowerCheck() #TODO
         power = int(random.random() * 100)
         if power < 20:
             self.Talk('fold')
         elif 20 <= power < 50:
-            self.Bet(SB)
             self.Talk('call')
+            self.Bet(SB)
         elif 50 <= power < 90:
+            self.Talk('raise')
             bet  = SB * (int(random.random()*10) + 1)
             self.Bet(bet)
-            self.Talk('raise')
         elif power >= 90:
-            bet = self.Bet(self.cash)
             self.Talk('allin')
+            bet = self.Bet(self.cash)
 
 def MakeUpPlayers(num: int=5):
     '''
@@ -233,15 +245,15 @@ def main():
     # check SB
     print()
     if PLAYERS[0].AI:
-        POOL = PLAYERS[0].Bet(SB, POOL)
+        POOL = PLAYERS[0].Bet(SB)
     else:   
         POOL = PLAYER.Bet(SB)
 
     # check BB
     if PLAYERS[1].AI:
-        POOL = PLAYERS[1].Bet(SB*2, POOL)
+        POOL = PLAYERS[1].Bet(SB*2)
     else:   
-        POOL = PLAYER.Bet(SB*2, POOL)
+        POOL = PLAYER.Bet(SB*2)
 
     # Preflop
     Preflop()
