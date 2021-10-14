@@ -1,6 +1,7 @@
 # __author__ = arslan
 # __date__ = 2021/10/11
 
+import time
 import random
 from typing import List
 
@@ -62,17 +63,21 @@ class Player():
             POOL.Add(self.name, bet)
         return POOL
 
-    def Talk(self, command):
+    def Talk(self, command, p=None):
+        time.sleep(1)
         if command == 'fold':
-            word = random.choice(CORPUS[FOLD])            
+            word = random.choice(CORPUS['FOLD'])            
         elif command == 'check':
-            word = random.choice(CORPUS[CHECK])
+            word = random.choice(CORPUS['CHECK'])
         elif command == 'call':
-            word = random.choice(CORPUS[CALL])
+            word = random.choice(CORPUS['CALL'])
         elif command == 'raise':
-            word = random.choice(CORPUS[RAISE])
+            word = random.choice(CORPUS['RAISE'])
         elif command == 'allin':
-            word = random.choice(CORPUS[ALLIN])
+            word = random.choice(CORPUS['ALLIN'])
+        elif command == 'trash':
+            trash = random.choice(CORPUS['TRASHTALK'])
+            word = f'{trash}{p.name}'
         print(f'{self.name}：{word}')
 
     def Combo(self) -> Combo:
@@ -89,6 +94,7 @@ class Player():
         return 50
     
     def Decide(self):
+        time.sleep(random.random()+2)
         if DEBUG:
             print(f'{self.name}正在决策...')
         # power = self.PowerCheck() #TODO
@@ -105,6 +111,13 @@ class Player():
         elif power >= 90:
             self.Talk('allin')
             bet = self.Bet(self.cash)
+
+
+def ChooseOpponent(p):
+    opponent = random.choice(PLAYERS)
+    if opponent.name == p.name:
+        opponent = ChooseOpponent(p)
+    return opponent
 
 def MakeUpPlayers(num: int=5):
     '''
@@ -125,6 +138,14 @@ def MakeUpPlayers(num: int=5):
     result.append(PLAYER)
     random.shuffle(result)
     PLAYERS = result
+
+    # init trash talk phase
+    for p in PLAYERS:
+        q = random.random()
+        opponent = ChooseOpponent(p)
+        if q > 0.7:
+            p.Talk('trash',p=opponent)
+
     return PLAYERS
 
 
@@ -258,5 +279,11 @@ def main():
     # Preflop
     Preflop()
     for i in range(2, 6):
+        PLAYERS[i].Decide()
+    print(f'你的手牌：{PLAYER.ShowHand()}',)
+
+    # Flop
+    Flop()
+    for i in range(0, 6):
         PLAYERS[i].Decide()
     print(f'你的手牌：{PLAYER.ShowHand()}',)
