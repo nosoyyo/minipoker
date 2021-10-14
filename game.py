@@ -10,6 +10,21 @@ from exceptions import *
 from utils import CORPUS, AI_NAMES
 
 #TODO stuff about nuts: powercheck & talk
+#TODO silent player.Fold() bug fix
+#TODO Player.Decide() bug fix
+#TODO human input
+#TODO side pool regularization
+#TODO real powercheck
+#TODO winner decide 
+#TODO SB/BB rotation
+#TODO real AI
+#TODO drawing calculation and related stuff(bluffing etc.)
+#TODO BB preflop raise
+#TODO manual/auto SB raise
+#TODO unit tests
+#TODO UI
+#TODO go online
+#TODO web UI
 
 class Pool:
 
@@ -99,7 +114,11 @@ class Player():
         # power = self.PowerCheck() #TODO
         power = int(random.random() * 100)
         if self.cash <= game.LASTBET:
-            pass
+            q = random.random()
+            if q > 0.5:
+                self.AllIn(game)
+            else:
+                self.Fold(game)
         elif power < 20:
             self.Talk('fold')
             self.Fold(game)
@@ -246,10 +265,10 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)
             self.RIVER_FLAG = True
-            return self.TABLE
         else:
             raise AlreadyRiverError('already RIVER!!')
-        print(f'current TABLE: {TABLE}\n')
+
+        print(f'current TABLE: {self.TABLE}\n')
 
 def ShowHand(slashstring) -> Table:
     '''
