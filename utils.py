@@ -1,12 +1,22 @@
-AI_NAMES = ['云师','jimmy仔','修师','范师','西米','铁锤','Zakk','胡哥','六爷','莎翁',]
+AI_NAMES = ['云师','jimmy仔','修师','范师','西米','铁锤','Zakk','胡哥','六爷','莎翁','刘凯龙',]
 
-AI_NAMES_EXT = ['姆巴佩','哈兰德','刘凯龙','马化腾','马斯克','Zuckerberg','乔布斯',]
+AI_NAMES_ENTRE = ['姆巴佩','哈兰德','马化腾','马斯克','Zuckerberg','乔布斯',]
+
+AI_NAMES_FTB = ['Mbappé','Haaland','Ronaldo','Messi','Zidane','Pelé','Neymar',
+                'Maradona','Rooney','Pogba','Benzema','Modric','Ramos','Bale',]
+
+AI_NAMES_MOVIE = ['马龙白兰度','迪卡普里奥','德普','汤姆克鲁斯','乔治克鲁尼','肖恩康纳利','伊斯特伍德',
+                  '布鲁斯威利斯','成龙','周星驰','姜文','宁浩','贾樟柯']
+
+AI_NAMES_RNR = ['Thom Yorke','Jonny Greenwood','Colin Greenwood','Slash',
+                'Bob Dylan','John Lennon','George Harrison','Ringo Starr',
+                'Paul McCartney','Sting','黄家驹','崔健','谢强']
 
 CORPUS = {
     'FOLD':['弃牌','🈚️了','没我了','扔掉','白白👋🏻','再见','无我了','这局没我','你们玩','算了，免费看戏',
     '看你们表演',],
 
-    'CHECK':['过','敲敲','叩叩','nb，过了','先过吧','我过',],
+    'CHECK':['过','敲敲','叩叩','nb，过了','先过吧','我过','没牌不得过么',],
 
     'CALL':['跟','跟上','跟起来','我跟','跟他妈的','跟了啊',],
 

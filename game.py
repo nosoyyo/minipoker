@@ -3,15 +3,21 @@
 
 import time
 import random
-from typing import List
+import logging
+from simple_term_menu import TerminalMenu
 from thpoker.core import Hand, Table, Combo, Cards
 
 from exceptions import *
 from utils import CORPUS, AI_NAMES
 
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+
 #TODO silent player.Fold() bug fix
 #TODO Player.Decide() bug fix
-#TODO Player.Check/Raise/Call
+#TODO CLI menu
 #TODO winner decide 
 #TODO human input
 #TODO manual/auto SB raise
@@ -28,7 +34,6 @@ from utils import CORPUS, AI_NAMES
 #TODO unit tests
 #TODO UI
 #TODO go online
-#TODO
 #TODO web UI
 
 class Pool:
@@ -100,8 +105,7 @@ class Player():
 
     def Combo(self, game) -> Combo:
         self.combo = Combo(hand=self.ShowHand(), table=ShowHand(game.TABLE))
-        if game.DEBUG:
-            print(f'{self.name}的combo：{self.combo}')
+        logger.debug(f'{self.name}的combo：{self.combo}')
         return self.combo
 
     def PowerCheck(self):
@@ -118,35 +122,66 @@ class Player():
         return opponent
 
     def Decide(self, game):
-        print(f'{self.name}正在决策...')
-        time.sleep(random.random()+2)
+        if self.is_AI:
+            print(f'{self.name}正在决策...')
+            s = random.random() + 2
+            time.sleep(s)
+            logger.debug(f'time.sleep: {s}')
 
-        power = self.PowerCheck() #TODO
-        if not self.is_AI:
-            available_menu = game.MakeUpMenu(self)
-            decision = input(available_menu)
-        elif self.cash <= game.LASTBET:
-            q = random.random()
-            if q > 0.5:
-                self.AllIn(game)
-            else:
+            power = self.PowerCheck() #TODO
+            logger.debug(f'power: {power}')
+            if self.cash <= game.LASTBET:
+                q = random.random()
+                if q > 0.5:
+                    self.AllIn(game)
+                else:
+                    self.Fold(game)
+            elif power < 20:
                 self.Fold(game)
-        elif power < 20:
-            self.Fold(game)
-        elif 20 <= power < 50:
-            self.Talk('call')
-            bet = game.LASTBET
-            self.Bet(bet, game)
-        elif 50 <= power < 90:
-            self.Talk('raise')
-            bet  = game.SB * (int(random.random()*4) + 1) + game.LASTBET
-            if bet >= self.cash:
+            elif 20 <= power < 40:
+                self.Check(game)
+            elif 40 <= power < 60:
+                self.Call(game)
+            elif 60 <= power < 90:
+                self.Raise(game)
+            elif power >= 90:
                 self.AllIn(game)
+        else:
+            menu = self.MakeUpMenu(game)
+            decision = menu.show()
+            logger.info(f'you choose: {decision}')
+
+    def MakeUpMenu(self, game):
+        #TODO
+        #OPTIONS = ['allin','call','check','fold','raise',]
+        options = []
+        if self.STAGE == 0:
+            if self.is_SB:
+                options = ['call','fold']
             else:
-                game.LASTBET = bet
-                self.Bet(bet, game)
-        elif power >= 90:
+                options = ['allin','call','fold','raise',]
+
+        logger.info(f'options: {options}')
+        return TerminalMenu(options)
+
+    
+    def Check(self, game):
+        self.Talk('check') #TODO
+        game.CHECKED = True
+    
+    def Call(self, game):
+        self.Talk('call')
+        bet = game.LASTBET
+        self.Bet(bet, game)
+
+    def Raise(self, game):
+        self.Talk('raise')
+        bet  = game.SB * (int(random.random()*4) + 1) + game.LASTBET
+        if bet >= self.cash:
             self.AllIn(game)
+        else:
+            game.LASTBET = bet
+            self.Bet(bet, game)
 
     def AllIn(self, game):
         self.Talk('allin')
@@ -160,25 +195,20 @@ class Player():
             if self.name == game.PLAYERS[i].name:
                 game.PLAYERS.pop(i)
                 print(f'{self.name}离开牌桌，还剩{len(game.PLAYERS)}家\n')
+                logger.debug(f'game.PLAYERS = {game.PLAYERS}')
                 break
 
 
 class Game():
     
     def __init__(self, n_AI=5, SB=5, cash=600):
-        self.DEBUG = True
         self.TABLE = []
-        self.PREFLOP_FLAG = False
-        self.FLOP_FLAG = False
-        self.TURN_FLAG = False
-        self.RIVER_FLAG = False
+        self.RawCards = self.Shuffle()
         self.POOL = Pool()
         self.SB = SB
         self.BB = SB*2
-        self.LASTBET = self.BB
-        self.PLAYER = Player(cash=cash, is_AI=False)
-        self.RawCards = self.Shuffle()
 
+        self.PLAYER = Player(cash=cash, is_AI=False)
         self.MakeUpAI(n_AI, cash)
         self.PLAYERS = self.AI + [self.PLAYER]
         random.shuffle(self.PLAYERS)
@@ -193,6 +223,15 @@ class Game():
             opponent = p.ChooseOpponent(self)
             if q > 0.7:
                 p.Talk('trash', p=opponent)
+        self.LASTBET = self.BB
+        self.CHECKED = False
+
+        # :0: init
+        # :1: preflop
+        # :2: flop
+        # :3: turn
+        # :4: river
+        self.STAGE = 0
 
     def MakeUpAI(self, n_AI, cash):
         '''
@@ -221,67 +260,68 @@ class Game():
         random.shuffle(RawCards)
         return RawCards
 
-    def MakeUpMenu(self, player):
-        pass
 
     def Deal(self, player):
         card1 = self.RawCards.pop()
         card2 = self.RawCards.pop()
-        if self.DEBUG:
-            print(f'给{player.name}发了一张{card1}')
-            print(f'给{player.name}发了一张{card2}\n')
+        logger.debug(f'给{player.name}发了一张{card1}')
+        logger.debug(f'给{player.name}发了一张{card2}\n')
         player.hand.append(card1)
         player.hand.append(card2)
  
     def Preflop(self):
         print('\nPreflop阶段\n')
-        if not self.PREFLOP_FLAG:
+        if self.STAGE == 0:
             for i in range(len(self.PLAYERS)):
                 self.Deal(self.PLAYERS[i])
-            self.PREFLOP_FLAG = True
+            self.STAGE = 1
             return
         else:
-            print('already PREFLOP!')
+            logger.error(f'game.STAGE should be 0, now {self.STAGE}!')
+            raise GameStageError()
 
     def Flop(self):
         print('\nFlop阶段\n')
-        if not self.FLOP_FLAG:
+        if self.STAGE == 1:
             self.TABLE.append(self.RawCards.pop())
             self.TABLE.append(self.RawCards.pop())
             self.TABLE.append(self.RawCards.pop())
             ShowHand(self.TABLE)
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)
-            self.FLOP_FLAG = True
+            self.STAGE = 2
         else:
-            raise AlreadyFlopError('already FLOP!!')
+            logger.error(f'game.STAGE should be 1, now {self.STAGE}!')
+            raise GameStageError()
         print(f'current TABLE: {self.TABLE}\n')
 
     def Turn(self):
         print('\n转牌圈\n')
 
-        if not self.TURN_FLAG:
+        if self.STAGE == 2:
             self.TABLE.append(self.RawCards.pop())
             ShowHand(self.TABLE)
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)          
-            self.TURN_FLAG = True
+            self.STAGE = 3
 
         else:
-            raise AlreadyTurnError('already TURN!!')
+            logger.error(f'game.STAGE should be 2, now {self.STAGE}!')
+            raise GameStageError()
         print(f'current TABLE: {self.TABLE}\n')
 
     def River(self):
         print('\n河牌圈\n')
 
-        if not self.RIVER_FLAG:
+        if self.STAGE == 3:
             self.TABLE.append(self.RawCards.pop())
             ShowHand(self.TABLE)
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)
-            self.RIVER_FLAG = True
+            self.STAGE = 4
         else:
-            raise AlreadyRiverError('already RIVER!!')
+            logger.error(f'game.STAGE should be 3, now {self.STAGE}!')
+            raise GameStageError()
 
         print(f'current TABLE: {self.TABLE}\n')
 

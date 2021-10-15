@@ -1,12 +1,4 @@
-
-class AlreadyFlopError(Exception):
-    pass
-
-class AlreadyTurnError(Exception):
-    pass
-
-class AlreadyRiverError(Exception):
-    pass
+class GameStageError(Exception)
 
 class OverBetError(Exception):
     pass
