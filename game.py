@@ -9,21 +9,26 @@ from thpoker.core import Hand, Table, Combo, Cards
 from exceptions import *
 from utils import CORPUS, AI_NAMES
 
-#TODO stuff about nuts: powercheck & talk
 #TODO silent player.Fold() bug fix
 #TODO Player.Decide() bug fix
-#TODO human input
-#TODO side pool regularization
-#TODO real powercheck
+#TODO Player.Check/Raise/Call
 #TODO winner decide 
-#TODO SB/BB rotation
-#TODO real AI
-#TODO drawing calculation and related stuff(bluffing etc.)
-#TODO BB preflop raise
+#TODO human input
 #TODO manual/auto SB raise
+#TODO side pool regularization
+#TODO SB/BB rotation
+#TODO BB preflop raise
+#TODO logging
+#TODO drawing calculation and related stuff(bluffing etc.)
+#TODO real powercheck
+#TODO stuff about nuts: powercheck & talk
+#TODO real AI
+#TODO random smalltalk
+#TODO player/AI interact: trashtalk etc.
 #TODO unit tests
 #TODO UI
 #TODO go online
+#TODO
 #TODO web UI
 
 class Pool:
@@ -36,20 +41,24 @@ class Pool:
         self.ShowPool(name, bet)
 
     def Side(self, bet: int, index)-> None:
+        #TODO
         pass
 
     def ShowPool(self, name, bet)-> None:
         print(f'{name}下注{bet}')
         if len(self.pools) == 1:
             print(f'目前底池：{self.pools[0]}\n')
+        else:
+            #TODO
+            pass
 
 
 class Player():
-    def __init__(self, cash, name=None, AI=True) -> None:
+    def __init__(self, cash, name=None, is_AI=True) -> None:
         if not name:
             name = 'arslan'
         self.name = name
-        self.AI = AI
+        self.is_AI = is_AI
         self.hand = []
         self.cash = cash
         self.is_SB = False
@@ -99,7 +108,8 @@ class Player():
         # flush check
         # ace check
         # TODO
-        return 50
+        power = int(random.random() * 100)
+        return power
     
     def ChooseOpponent(self, game):
         opponent = random.choice(game.PLAYERS)
@@ -111,16 +121,17 @@ class Player():
         print(f'{self.name}正在决策...')
         time.sleep(random.random()+2)
 
-        # power = self.PowerCheck() #TODO
-        power = int(random.random() * 100)
-        if self.cash <= game.LASTBET:
+        power = self.PowerCheck() #TODO
+        if not self.is_AI:
+            available_menu = game.MakeUpMenu(self)
+            decision = input(available_menu)
+        elif self.cash <= game.LASTBET:
             q = random.random()
             if q > 0.5:
                 self.AllIn(game)
             else:
                 self.Fold(game)
         elif power < 20:
-            self.Talk('fold')
             self.Fold(game)
         elif 20 <= power < 50:
             self.Talk('call')
@@ -144,6 +155,7 @@ class Player():
         game.LASTBET = bet
 
     def Fold(self, game):
+        self.Talk('fold')
         for i in range(len(game.PLAYERS)+1):
             if self.name == game.PLAYERS[i].name:
                 game.PLAYERS.pop(i)
@@ -164,7 +176,7 @@ class Game():
         self.SB = SB
         self.BB = SB*2
         self.LASTBET = self.BB
-        self.PLAYER = Player(cash=cash, AI=False)
+        self.PLAYER = Player(cash=cash, is_AI=False)
         self.RawCards = self.Shuffle()
 
         self.MakeUpAI(n_AI, cash)
@@ -208,6 +220,9 @@ class Game():
         random.shuffle(RawCards)
         random.shuffle(RawCards)
         return RawCards
+
+    def MakeUpMenu(self, player):
+        pass
 
     def Deal(self, player):
         card1 = self.RawCards.pop()
