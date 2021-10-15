@@ -15,16 +15,12 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-#TODO silent player.Fold() bug fix
-#TODO Player.Decide() bug fix
 #TODO CLI menu
 #TODO winner decide 
-#TODO human input
 #TODO manual/auto SB raise
 #TODO side pool regularization
-#TODO SB/BB rotation
+#TODO new game: SB/BB rotation
 #TODO BB preflop raise
-#TODO logging
 #TODO drawing calculation and related stuff(bluffing etc.)
 #TODO real powercheck
 #TODO stuff about nuts: powercheck & talk
@@ -59,7 +55,7 @@ class Pool:
 
 
 class Player():
-    def __init__(self, cash, name=None, is_AI=True) -> None:
+    def __init__(self, cash, name=None, is_AI=True,) -> None:
         if not name:
             name = 'arslan'
         self.name = name
@@ -68,9 +64,15 @@ class Player():
         self.cash = cash
         self.is_SB = False
         self.is_BB = False
+        self.index = None
 
     def __repr__(self) -> str:
         return f'<玩家：{self.name}>'
+    
+    def _getSelfIndex(self, game):
+        for i in range(len(game.PLAYERS)):
+            if self.name == game.PLAYERS[i].name:
+                self.index = i
 
     def ShowHand(self) -> Hand:
         string = ''
@@ -86,18 +88,23 @@ class Player():
             game.POOL.Add(self.name, bet)
         return game.POOL
 
-    def Talk(self, command, p=None):
+    def Talk(self, game, command, p=None):
         time.sleep(1)
         if command == 'fold':
-            word = random.choice(CORPUS['FOLD'])            
+            word = random.choice(CORPUS['FOLD'])      
+            self.Fold(game)      
         elif command == 'check':
             word = random.choice(CORPUS['CHECK'])
+            self.Check(game)
         elif command == 'call':
             word = random.choice(CORPUS['CALL'])
+            self.Call(game)
         elif command == 'raise':
             word = random.choice(CORPUS['RAISE'])
+            self.Raise(game)
         elif command == 'allin':
             word = random.choice(CORPUS['ALLIN'])
+            self.AllIn(game)
         elif command == 'trash':
             trash = random.choice(CORPUS['TRASHTALK'])
             word = f'{trash}{p.name}'
@@ -123,74 +130,91 @@ class Player():
 
     def Decide(self, game):
         if self.is_AI:
-            print(f'{self.name}正在决策...')
-            s = random.random() + 2
-            time.sleep(s)
-            logger.debug(f'time.sleep: {s}')
-
-            power = self.PowerCheck() #TODO
-            logger.debug(f'power: {power}')
-            if self.cash <= game.LASTBET:
-                q = random.random()
-                if q > 0.5:
-                    self.AllIn(game)
-                else:
-                    self.Fold(game)
-            elif power < 20:
-                self.Fold(game)
-            elif 20 <= power < 40:
-                self.Check(game)
-            elif 40 <= power < 60:
-                self.Call(game)
-            elif 60 <= power < 90:
-                self.Raise(game)
-            elif power >= 90:
-                self.AllIn(game)
-        else:
-            menu = self.MakeUpMenu(game)
-            decision = menu.show()
-            logger.info(f'you choose: {decision}')
-
-    def MakeUpMenu(self, game):
-        #TODO
-        #OPTIONS = ['allin','call','check','fold','raise',]
-        options = []
-        if self.STAGE == 0:
-            if self.is_SB:
-                options = ['call','fold']
+            if not self.cash:
+                logger.info(f'{self.name}无筹码，跳过此轮')
+                pass
             else:
-                options = ['allin','call','fold','raise',]
+                print(f'{self.name}正在决策...')
+                s = random.random() + 2
+                time.sleep(s)
+                logger.debug(f'time.sleep: {s}')
+
+                power = self.PowerCheck() #TODO
+                logger.debug(f'power: {power}')
+
+                if self.cash <= game.LASTBET:
+                    q = random.random()
+                    logger.debug(f'{self.name}现金:{self.cash}，当前下注{game.LASTBET}')
+                    if q > 0.5:                        
+                        self.Talk(game, 'allin')
+                    else:
+                        self.Talk(game, 'fold')
+                elif power < 20:
+                    self.Talk(game, 'fold')
+                elif 20 <= power < 40:
+                    if not game.LASTBET:
+                        self.Talk(game, 'check')
+                    else:
+                        self.Talk(game, 'fold')
+                elif 40 <= power < 60:
+                    self.Talk(game, 'call')
+                elif 60 <= power < 90:
+                    self.Talk(game, 'raise')
+                elif power >= 90:
+                    self.Talk(game, 'allin')
+        else:
+            if not self.cash:
+                pass
+            else:
+                options = self.Options(game)
+                menu = TerminalMenu(options)
+                decision = menu.show()
+                decision = options[decision]
+                logger.info(f'you choose: {decision}')
+                self.Talk(game, decision)
+
+    def Options(self, game):
+        # options = ['allin','call','check','fold','raise',]
+        options = []
+        if game.LASTBET >= self.cash:
+            options = ['allin', 'fold']
+        else:
+            if game.STAGE == 0:
+                if self.is_SB:
+                    options = ['call','fold']
+                else:
+                    options = ['call','raise','allin','fold',]
+            else:
+                if not game.LASTBET:
+                    options = ['call','check','raise','allin','fold',]
+                else:
+                    options = ['call','raise','allin','fold',]
 
         logger.info(f'options: {options}')
-        return TerminalMenu(options)
+        return options
 
     
     def Check(self, game):
-        self.Talk('check') #TODO
         game.CHECKED = True
     
     def Call(self, game):
-        self.Talk('call')
         bet = game.LASTBET
         self.Bet(bet, game)
 
     def Raise(self, game):
-        self.Talk('raise')
         bet  = game.SB * (int(random.random()*4) + 1) + game.LASTBET
         if bet >= self.cash:
-            self.AllIn(game)
+            self.Talk(game, 'allin')
         else:
             game.LASTBET = bet
             self.Bet(bet, game)
 
     def AllIn(self, game):
-        self.Talk('allin')
         bet = self.cash
         self.Bet(bet, game)
         game.LASTBET = bet
 
     def Fold(self, game):
-        self.Talk('fold')
         for i in range(len(game.PLAYERS)+1):
             if self.name == game.PLAYERS[i].name:
                 game.PLAYERS.pop(i)
@@ -222,7 +246,7 @@ class Game():
             q = random.random()
             opponent = p.ChooseOpponent(self)
             if q > 0.7:
-                p.Talk('trash', p=opponent)
+                p.Talk(self, 'trash', p=opponent)
         self.LASTBET = self.BB
         self.CHECKED = False
 
@@ -259,7 +283,6 @@ class Game():
         random.shuffle(RawCards)
         random.shuffle(RawCards)
         return RawCards
-
 
     def Deal(self, player):
         card1 = self.RawCards.pop()
