@@ -9,10 +9,7 @@ from player import Player
 from utils import CORPUS, AI_NAMES, ShowHand, SortCombo
 
 
-#TODO MUST DO GAME.SBPLAYER!!
-#ISSUE infinite loop when SB allin at Preflop
-#TODO new game: SB/BB rotation
-#TODO BB needs to call or fold when someone allin at preflop stage
+#TODO human player must buy in if stay
 #TODO manual/auto SB raise
 #TODO BB preflop raise
 #TODO the 1st player of flop round should be able to check
@@ -64,7 +61,7 @@ class Pool:
         pass
 
     def ShowPool(self, p: Player, bet)-> None:
-        print(f'{p.name}现金 ${p.cash}，下注 ${bet}')
+        print(f'{p.name}下注 ${bet}，剩余现金 ${p.cash}')
         if len(self.pools) == 1:
             print(f'目前底池 ${self.pools[0]}')
         else:
@@ -103,6 +100,14 @@ class Game():
         self.LASTBET = self.BB
         self.WINNER = None
         self.OVER = False
+
+    @property
+    def SBPLAYER(self):
+        return self.PLAYERS[0]
+
+    @property
+    def BBPLAYER(self):
+        return self.PLAYERS[1]
 
     def MakeUpAI(self, n_AI, cash):
         '''
@@ -181,7 +186,6 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)          
             self.STAGE = 3
-            self.Allocate()
 
         else:
             self.logger.error(f'game.STAGE should be 2, now {self.STAGE}!')
@@ -197,7 +201,6 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)
             self.STAGE = 4
-            self.Allocate()
         else:
             self.logger.error(f'game.STAGE should be 3, now {self.STAGE}!')
             raise GameStageError()
@@ -231,20 +234,9 @@ class Game():
                 #TODO side-pool situations
                 pass
                 self.OVER = True
+        return self.OVER
 
     def Rotate(self):
         r = self.PLAYERS.pop(0)
         self.PLAYERS.append(r)
-
-        for i in range(len(self.PLAYERS)):
-            if i == 0:
-                self.PLAYERS[i].is_SB = True
-                
-                self.PLAYERS[i].is_BB = False
-            elif i == 1:
-                self.PLAYERS[i].is_SB = False
-                self.PLAYERS[i].is_BB = True
-            else:
-                self.PLAYERS[i].is_SB = False
-                self.PLAYERS[i].is_BB = False
                 

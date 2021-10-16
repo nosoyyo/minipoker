@@ -18,17 +18,15 @@ class Player():
         self.is_AI = is_AI
         self.hand = []
         self.cash = cash
-        self.is_SB = False
-        self.is_BB = False
         self.index = None
 
     def __repr__(self) -> str:
-        return f'<玩家：{self.name}>'
+        return f'<{self.name} ${self.cash}>'
     
-    def _getSelfIndex(self, game):
+    def GetSelfIndex(self, game) -> int:
         for i in range(len(game.PLAYERS)):
             if self.name == game.PLAYERS[i].name:
-                self.index = i
+                return i
 
     def ShowHand(self) -> Hand:
         string = ''
@@ -41,7 +39,7 @@ class Player():
             raise OverBetError(f'不能下这些，你只有{self.cash}了')
         else:
             self.cash -= bet
-            game.POOL.Add(self.name, bet)
+            game.POOL.Add(self, bet)
         return game.POOL
 
     def Talk(self, game, command, p=None):
@@ -84,7 +82,7 @@ class Player():
             opponent = self.ChooseOpponent(game)
         return opponent
 
-    def Decide(self, game, situation):
+    def Decide(self, game):
         if self.is_AI:
             self.logger.debug(f'{self.name}行动')
             if not self.cash:
@@ -124,6 +122,7 @@ class Player():
                 pass
             else:         
                 print(f'当前底池 {game.POOL}')
+                print(f'你的筹码：${self.cash}，底池筹码比{game.POOL/self.cash:.2%}')
                 print(f'你的手牌：{ShowHand(self.hand)}')
                 if game.STAGE >= 2:
                     print(f'桌面：{ShowHand(game.TABLE)}')
@@ -142,7 +141,7 @@ class Player():
             options = ['allin', 'fold']
         else:
             if game.STAGE == 0:
-                if self.is_SB:
+                if self.name == game.SBPLAYER.name:
                     options = ['call','check','fold']
                 else:
                     options = ['call','raise','allin','fold',]
@@ -155,7 +154,6 @@ class Player():
         self.logger.debug(f'options: {options}')
         return options
 
-    
     def Check(self, game):
         game.CHECKED = True
         game.LASTBET = 0
@@ -181,11 +179,10 @@ class Player():
         game.LASTBET = bet
 
     def Fold(self, game):
-        for i in range(len(game.PLAYERS)+1):
-            if self.name == game.PLAYERS[i].name:
-                game.PLAYERS.pop(i)
-                left = '、'.join([p.name for p in game.PLAYERS])
-                print(f'{self.name}离开牌桌，还剩{left}')
-                #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
-                break
+        index = self.GetSelfIndex(game)
+        game.PLAYERS.pop(index)
+        self.logger.debug(f'Player.Fold cause game.PLAYERS.pop({index})')
+        left = '、'.join([p.name for p in game.PLAYERS])
+        print(f'{self.name}离开牌桌，还剩{left}')
+        #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
 

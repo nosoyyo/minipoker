@@ -1,3 +1,4 @@
+import random
 import logging
 
 from game import Game, Pool
@@ -5,10 +6,12 @@ from game import Game, Pool
 
 logger = logging.getLogger('main')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s@%(name)s.%(funcName)s: %(message)s')
-sh  = logging.StreamHandler()
+formatter = logging.Formatter('[%levelname] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s')
+sh = logging.StreamHandler()
+fh = logging.FileHandler('main.log')
 sh.setFormatter(formatter)
 logger.addHandler(sh)
+logger.addHandler(fh)
 
 
 def main():
@@ -33,24 +36,23 @@ def main():
 
         def Action():
             for p in game.PLAYERS:
-                while not game.OVER:
-                    game.CheckState()
-                    p.Decide(game)
-                else:
+                over = game.CheckState()
+                if over:
                     NewGame()
+                else:
+                    p.Decide(game)
 
         # Preflop
         game.Preflop()
 
-        for p in game.PLAYERS:
-            if p.is_SB:
-                game.POOL = p.Bet(game.SB, game)
-            elif p.is_BB:
-                game.POOL = p.Bet(game.BB, game)
-            else:
-                p.Decide(game)
+        game.SBPLAYER.Bet(game.SB, game)
+        game.BBPLAYER.Bet(game.BB, game)
+
+        for p in game.PLAYERS[2:]:
+            p.Decide(game)
+
         for p in game.PLAYERS[:2]:
-            p.Decide(game, 'callOrFold')
+            p.Decide(game)
 
         # Flop
         game.Flop()
