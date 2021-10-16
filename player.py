@@ -36,14 +36,14 @@ class Player():
 
     def Bet(self, bet, game):
         if self.cash < bet:
-            raise OverBetError(f'不能下这些，你只有{self.cash}了')
+            raise OverBetError(f'{self.name}不能下注 ${bet}，筹码只剩 ${self.cash} 了')
         else:
             self.cash -= bet
             game.POOL.Add(self, bet)
         return game.POOL
 
     def Talk(self, game, command, p=None):
-        time.sleep(1)
+        time.sleep(0.3)
         if command == 'fold':
             word = random.choice(CORPUS['FOLD'])      
             self.Fold(game)      
@@ -62,6 +62,10 @@ class Player():
         elif command == 'trash':
             trash = random.choice(CORPUS['TRASHTALK'])
             word = f'{trash}{p.name}'
+        elif command == 'buyin':
+            word = random.choice(CORPUS['BUYIN'])
+        elif command == 'bye':
+            word = random.choice(CORPUS['BYE'])
         print(f'{self.name}：{word}\n')
 
     def Combo(self, game) -> Combo:
@@ -90,7 +94,7 @@ class Player():
                 pass
             else:
                 print(f'{self.name}正在决策...')
-                s = random.random() + 2
+                s = random.random()
                 time.sleep(s)
                 self.logger.debug(f'time.sleep: {s}')
 
@@ -119,10 +123,17 @@ class Player():
                     self.Talk(game, 'allin')
         else:
             if not self.cash:
-                pass
+                options = ['BUY IN', 'GAME OVER']
+                menu = TerminalMenu(options)
+                decision = menu.show()
+                decision = options[decision]
+                if decision == 'BUY IN':
+                    self.BuyIn()
+                else:
+                    game.Exit()
             else:         
-                print(f'当前底池 {game.POOL}')
-                print(f'你的筹码：${self.cash}，底池筹码比{game.POOL/self.cash:.2%}')
+                print(f'当前底池: ${game.POOL}')
+                print(f'你的筹码：${self.cash}，底池筹码比{game.Pool/self.cash:.2%}')
                 print(f'你的手牌：{ShowHand(self.hand)}')
                 if game.STAGE >= 2:
                     print(f'桌面：{ShowHand(game.TABLE)}')
@@ -186,3 +197,13 @@ class Player():
         print(f'{self.name}离开牌桌，还剩{left}')
         #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
 
+    def BuyIn(self, game):
+        self.cash += game.BUYIN
+        self.logger.info(f'{self.name} 买入 ${game.BUYIN}，上桌')
+        self.Talk('buyin')
+    
+    def Bye(self, game):
+        index = self.GetSelfIndex()
+        game.PLAYERS.pop(index)
+        self.logger.info(f'{self.name} 下桌了')
+        self.Talk('bye')

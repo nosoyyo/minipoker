@@ -1,6 +1,7 @@
 # __author__ = arslan
 # __date__ = 2021/10/11
 
+import sys
 import random
 import logging
 
@@ -9,7 +10,7 @@ from player import Player
 from utils import CORPUS, AI_NAMES, ShowHand, SortCombo
 
 
-#TODO human player must buy in if stay
+#ISSUE SB should be able to check at Flop
 #TODO manual/auto SB raise
 #TODO BB preflop raise
 #TODO the 1st player of flop round should be able to check
@@ -43,9 +44,9 @@ class Pool:
     def __len__(self) -> int:
         return len(self.pools)
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         #TODO
-        return f'${self.pools[0]}'
+        return str(self.pools[0])
 
     def Add(self, p: Player, bet: int, index=0) -> None:
         self.pools[index] += bet
@@ -71,18 +72,19 @@ class Pool:
 
 class Game():
     
-    def __init__(self, n_AI=5, SB=5, cash=600):
+    def __init__(self, n_AI=5, SB=5, buyin=600):
         self.logger = logging.getLogger('main.game')
 
-        self.NUMOFGAMES = 0
+        self.BUYIN = buyin
+        self.NUMOFGAMES = 1
         self.TABLE = []
         self.RawCards = self.Shuffle()
         self.POOL = Pool()
         self.SB = SB
         self.BB = SB*2
 
-        self.PLAYER = Player(cash=cash, is_AI=False)
-        self.MakeUpAI(n_AI, cash)
+        self.PLAYER = Player(cash=buyin, is_AI=False)
+        self.MakeUpAI(n_AI, buyin)
         self.PLAYERS = self.AI + [self.PLAYER]
         random.shuffle(self.PLAYERS)
         self.TrashTalk()
@@ -100,6 +102,11 @@ class Game():
         self.LASTBET = self.BB
         self.WINNER = None
         self.OVER = False
+
+    @property
+    def Pool(self):
+        #TODO
+        return self.POOL.pools[0]
 
     @property
     def SBPLAYER(self):
@@ -143,6 +150,15 @@ class Game():
             if q > 0.7:
                 p.Talk(self, 'trash', p=opponent)
 
+    def BuyIn(self):
+        for p in self.PLAYERS:
+            if not p.cash:
+                q = random.random()
+                if q > 0.5:
+                    p.BuyIn(self)
+                else:
+                    p.Bye(self)
+
     def Deal(self, player):
         card1 = self.RawCards.pop()
         card2 = self.RawCards.pop()
@@ -152,7 +168,6 @@ class Game():
         player.hand.append(card2)
  
     def Preflop(self):
-        print(f'\n第{self.NUMOFGAMES}局')
         print(f'Preflop阶段\n')
         if self.STAGE == 0:
             for i in range(len(self.PLAYERS)):
@@ -240,3 +255,8 @@ class Game():
         r = self.PLAYERS.pop(0)
         self.PLAYERS.append(r)
                 
+    def Exit(self):
+        try:
+            sys.exit(0)
+        except:
+            print('bye👋🏻')
