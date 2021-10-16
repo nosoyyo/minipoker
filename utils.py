@@ -1,3 +1,6 @@
+from thpoker.core import Table
+
+
 AI_NAMES = ['云师','jimmy仔','修师','范师','西米','铁锤','Zakk','胡哥','六爷','莎翁','刘凯龙',]
 
 AI_NAMES_ENTRE = ['姆巴佩','哈兰德','马化腾','马斯克','Zuckerberg','乔布斯',]
@@ -29,3 +32,13 @@ CORPUS = {
 
     'TRASHTALK':['加油啊','能行吗','放松点，别紧张','没关系，输就输了呀','敢玩吗','还能玩动吗',]
 }
+
+
+def ShowHand(slashstring) -> Table:
+    '''
+    :slashstring: e.g. like '6d/As/Th' in TABLE
+    '''
+    string = ''
+    for i in range(len(slashstring)):
+        string += slashstring[i] + '/'
+    return(Table(string[:-1]))
