@@ -10,34 +10,6 @@ from player import Player
 from utils import CORPUS, AI_NAMES, ShowHand, SortCombo
 
 
-#ISSUE missing action in River stage
-#ISSUE BB should not be able to fold when it's BB
-#ISSUE player should be rejoin the game when a new game started
-#TODO manual/auto SB raise
-#TODO BB preflop raise
-#TODO the 1st player of flop round should be able to check
-
-#TODO drawing calculation and related stuff(bluffing etc.)
-#TODO real powercheck & probability helper
-#TODO stuff about nuts: powercheck & talk
-
-#TODO real AI: characteristics
-#TODO player/AI interact: trashtalk etc.
-#TODO random smalltalk
-
-#IMPROVE CLI menu: 1/3 pool etc. helper
-#TODO side pool regularization
-#IMPROVE game.PLAYERS should be more mechanical
-#TODO game.SBPLAYER and game.BBPLAYER
-#IMPROVE improve Pool
-
-#TODO game history & stats
-#TODO unit tests
-#TODO UI
-#TODO go online
-#TODO web UI
-
-
 class Pool:
 
     def __init__(self, n_players) -> None:
@@ -80,7 +52,7 @@ class Game():
         self.logger = logging.getLogger('main.game')
 
         self.BUYIN = buyin
-        self.NUMOFGAMES = 1
+        self.NUMOFGAMES = 0
         self.TABLE = []
         self.RawCards = self.Shuffle()
         self.SB = SB
@@ -96,11 +68,14 @@ class Game():
         # distribue SB and BB
         self.Rotate()
 
-        # :0: init
-        # :1: preflop
-        # :2: flop
-        # :3: turn
-        # :4: river
+        ''' 
+        0 - Init
+        1 - Preflop
+        2 - Flop
+        3 - Turn
+        4 - River
+        5 - Summary
+        '''
         self.STAGE = 0
 
         self.LASTBET = self.BB
@@ -177,7 +152,7 @@ class Game():
         player.hand.append(card2)
  
     def Preflop(self):
-        print(f'Preflop阶段\n')
+        print(f'\n第{self.NUMOFGAMES}局 Preflop阶段\n')
         if self.STAGE == 0:
             for i in range(len(self.PLAYERS)):
                 self.Deal(self.PLAYERS[i])
@@ -187,7 +162,7 @@ class Game():
             raise GameStageError()
 
     def Flop(self):
-        print('\nFlop阶段\n')
+        print('\n第{self.NUMOFGAMES}局 Flop阶段\n')
         self.LASTBET = 0
         if self.STAGE == 1:
             self.TABLE.append(self.RawCards.pop())
@@ -202,7 +177,7 @@ class Game():
             raise GameStageError()
 
     def Turn(self):
-        print('\n转牌圈\n')
+        print('\n第{self.NUMOFGAMES}局 转牌圈\n')
         self.LASTBET = 0
         if self.STAGE == 2:
             self.TABLE.append(self.RawCards.pop())
@@ -216,7 +191,7 @@ class Game():
             raise GameStageError()
 
     def River(self):
-        print('\n河牌圈\n')
+        print('\n第{self.NUMOFGAMES}局 河牌圈\n')
         self.LASTBET = 0
         if self.STAGE == 3:
             self.TABLE.append(self.RawCards.pop())
@@ -227,6 +202,10 @@ class Game():
         else:
             self.logger.error(f'game.STAGE should be 3, now {self.STAGE}!')
             raise GameStageError()
+
+    def Summary(self):
+        if self.STAGE == 4:
+            pass
 
     def CheckState(self):
         '''

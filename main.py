@@ -21,11 +21,14 @@ def main():
 
     def NewGame():
 
+        game.NUMOFGAMES += 1
         print(f'\n第{game.NUMOFGAMES}局')
 
         game.OVER = False
-        game.NUMOFGAMES += 1
         game.PLAYERS += game.WAITLIST
+        game.WAITLIST = []
+        for p in game.PLAYERS:
+            p.hand = []
 
         game.TABLE = []
         game.RawCards = game.Shuffle()

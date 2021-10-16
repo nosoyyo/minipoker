@@ -56,8 +56,13 @@ class Player():
             self.Call(game)
         elif command == 'raise':
             word = random.choice(CORPUS['RAISE'])
-            opponent = self.ChooseOpponent(game)
-            word = f'{word}，跟吗{opponent.name}'
+            #opponent = self.ChooseOpponent(game)
+            pindex = self.GetSelfIndex(game)
+            oindex = pindex + 1
+            if oindex > len(game.PLAYERS) - 2:
+                oindex = 0
+            opponent = game.PLAYERS[oindex]
+            word = f'{word}，敢跟吗{opponent.name}'
             self.Raise(game)
         elif command == 'allin':
             word = random.choice(CORPUS['ALLIN'])
@@ -75,7 +80,6 @@ class Player():
 
     def Combo(self, game) -> Combo:
         self.combo = Combo(hand=self.ShowHand(), table=ShowHand(game.TABLE))
-        self.logger.debug(f'{self.name}的combo：{self.combo}')
         return self.combo
 
     def PowerCheck(self):
@@ -93,7 +97,8 @@ class Player():
 
     def Decide(self, game):
         if self.is_AI:
-            self.logger.debug(f'{self.name}行动')
+            self.logger.debug(f'\n{self.name}行动')
+            self.logger.debug(f'{self.name}手牌：{ShowHand(self.hand)}')
             if not self.cash:
                 if game.STAGE > 1:
                     self.logger.info(f'{self.name}无筹码，跳过此轮')
@@ -146,11 +151,18 @@ class Player():
             else:
                 print(f'{game.LASTBETPLAYER}刚才下注 {game.LASTBET}')
                 print(f'当前底池: ${game.POOL}')
-                print(f'你的筹码：${self.cash}，底池筹码比{game.Pool/self.cash:.2%}')
+                rate = None
+                if self.cash:
+                    rate = game.Pool/self.cash
+                if rate:
+                    print(f'你的筹码：${self.cash}，底池筹码比{rate:.2%}')
+                else:
+                    print(f'你的筹码：${self.cash}')
                 print(f'你的手牌：{ShowHand(self.hand)}')
                 if game.STAGE >= 2:
                     print(f'桌面：{ShowHand(game.TABLE)}')
                     print(f'你的牌力：{self.combo}')
+
                 options = self.Options(game)
                 menu = TerminalMenu(options)
                 decision = menu.show()
@@ -226,4 +238,4 @@ class Player():
         index = self.GetSelfIndex(game)
         game.PLAYERS.pop(index)
         self.logger.info(f'{self.name} 下桌了')
-        self.Talk('bye')
+        self.Talk(game, 'bye')
