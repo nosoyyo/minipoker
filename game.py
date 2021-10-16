@@ -9,24 +9,29 @@ from player import Player
 from utils import CORPUS, AI_NAMES, ShowHand, SortCombo
 
 
-#ISSUE still actions after win
-#TODO the 1st player of flop round should be able to check
-#TODO CLI menu: 1/3 pool etc. helper
-#TODO check winner and allocate money
-#TODO improve Pool
+#TODO MUST DO GAME.SBPLAYER!!
+#ISSUE infinite loop when SB allin at Preflop
+#TODO new game: SB/BB rotation
 #TODO BB needs to call or fold when someone allin at preflop stage
 #TODO manual/auto SB raise
-#ISSUE weird missing action of human player
-#TODO side pool regularization
-#TODO new game: SB/BB rotation
 #TODO BB preflop raise
+#TODO the 1st player of flop round should be able to check
+
 #TODO drawing calculation and related stuff(bluffing etc.)
 #TODO real powercheck & probability helper
 #TODO stuff about nuts: powercheck & talk
+
 #TODO real AI: characteristics
-#TODO random smalltalk
-#TODO game history & stats
 #TODO player/AI interact: trashtalk etc.
+#TODO random smalltalk
+
+#IMPROVE CLI menu: 1/3 pool etc. helper
+#TODO side pool regularization
+#IMPROVE game.PLAYERS should be more mechanical
+#TODO game.SBPLAYER and game.BBPLAYER
+#IMPROVE improve Pool
+
+#TODO game history & stats
 #TODO unit tests
 #TODO UI
 #TODO go online
@@ -40,10 +45,14 @@ class Pool:
     
     def __len__(self) -> int:
         return len(self.pools)
+    
+    def __repr__(self):
+        #TODO
+        return f'${self.pools[0]}'
 
-    def Add(self, name: str, bet: int, index=0) -> None:
+    def Add(self, p: Player, bet: int, index=0) -> None:
         self.pools[index] += bet
-        self.ShowPool(name, bet)
+        self.ShowPool(p, bet)
 
     def Give(self, p, index=0):
         p.cash += self.pools[index]
@@ -54,10 +63,10 @@ class Pool:
         #TODO
         pass
 
-    def ShowPool(self, name, bet)-> None:
-        print(f'{name}下注{bet}')
+    def ShowPool(self, p: Player, bet)-> None:
+        print(f'{p.name}现金 ${p.cash}，下注 ${bet}')
         if len(self.pools) == 1:
-            print(f'目前底池：{self.pools[0]}')
+            print(f'目前底池 ${self.pools[0]}')
         else:
             #TODO
             pass
@@ -68,6 +77,7 @@ class Game():
     def __init__(self, n_AI=5, SB=5, cash=600):
         self.logger = logging.getLogger('main.game')
 
+        self.NUMOFGAMES = 0
         self.TABLE = []
         self.RawCards = self.Shuffle()
         self.POOL = Pool()
@@ -81,7 +91,7 @@ class Game():
         self.TrashTalk()
 
         # distribue SB and BB
-        self.Rotate(self.PLAYERS)
+        self.Rotate()
 
         # :0: init
         # :1: preflop
@@ -137,12 +147,12 @@ class Game():
         player.hand.append(card2)
  
     def Preflop(self):
-        print('\nPreflop阶段\n')
+        print(f'\n第{self.NUMOFGAMES}局')
+        print(f'Preflop阶段\n')
         if self.STAGE == 0:
             for i in range(len(self.PLAYERS)):
                 self.Deal(self.PLAYERS[i])
             self.STAGE = 1
-            self.Allocate()
         else:
             self.logger.error(f'game.STAGE should be 0, now {self.STAGE}!')
             raise GameStageError()
@@ -157,7 +167,6 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)
             self.STAGE = 2
-            self.Allocate()
         else:
             self.logger.error(f'game.STAGE should be 1, now {self.STAGE}!')
             raise GameStageError()
@@ -195,7 +204,7 @@ class Game():
 
         print(f'current TABLE: {self.TABLE}\n')
 
-    def Allocate(self):
+    def CheckState(self):
         '''
         check winner and allocate money
         '''
@@ -230,6 +239,7 @@ class Game():
         for i in range(len(self.PLAYERS)):
             if i == 0:
                 self.PLAYERS[i].is_SB = True
+                
                 self.PLAYERS[i].is_BB = False
             elif i == 1:
                 self.PLAYERS[i].is_SB = False

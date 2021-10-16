@@ -17,16 +17,27 @@ def main():
 
     def NewGame():
         game.OVER = False
+        game.NUMOFGAMES += 1
 
         game.TABLE = []
         game.RawCards = game.Shuffle()
         game.POOL = Pool()
-        game.Rotate(game.PLAYERS)
+        game.Rotate()
+        logger.info(f'{game.PLAYERS[0]}小盲')
+        logger.info(f'{game.PLAYERS[1]}大盲')
         game.TrashTalk()
 
         game.LASTBET = game.BB
         game.STAGE = 0
         game.WINNER = None
+
+        def Action():
+            for p in game.PLAYERS:
+                while not game.OVER:
+                    game.CheckState()
+                    p.Decide(game)
+                else:
+                    NewGame()
 
         # Preflop
         game.Preflop()
@@ -38,29 +49,19 @@ def main():
                 game.POOL = p.Bet(game.BB, game)
             else:
                 p.Decide(game)
-
-        if game.OVER:
-            NewGame()
+        for p in game.PLAYERS[:2]:
+            p.Decide(game, 'callOrFold')
 
         # Flop
         game.Flop()
-        for p in game.PLAYERS:
-            p.Decide(game)
-        if game.OVER:
-            NewGame()
+        Action()
         
         # Turn
         game.Turn()
-        for p in game.PLAYERS:
-            p.Decide(game)
-        if game.OVER:
-            NewGame()
+        Action()
 
         # River
         game.River()
-        for p in game.PLAYERS:
-            p.Decide(game)
-        if game.OVER:
-            NewGame()
+        Action()
 
     NewGame()

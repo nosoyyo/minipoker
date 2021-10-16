@@ -64,7 +64,7 @@ class Player():
         elif command == 'trash':
             trash = random.choice(CORPUS['TRASHTALK'])
             word = f'{trash}{p.name}'
-        print(f'{self.name}：{word}')
+        print(f'{self.name}：{word}\n')
 
     def Combo(self, game) -> Combo:
         self.combo = Combo(hand=self.ShowHand(), table=ShowHand(game.TABLE))
@@ -84,8 +84,9 @@ class Player():
             opponent = self.ChooseOpponent(game)
         return opponent
 
-    def Decide(self, game):
+    def Decide(self, game, situation):
         if self.is_AI:
+            self.logger.debug(f'{self.name}行动')
             if not self.cash:
                 self.logger.info(f'{self.name}无筹码，跳过此轮')
                 pass
@@ -100,7 +101,7 @@ class Player():
 
                 if self.cash <= game.LASTBET:
                     q = random.random()
-                    self.logger.debug(f'{self.name}现金:{self.cash}，当前下注{game.LASTBET}')
+                    self.logger.debug(f'{self.name}现金 ${self.cash}，当前下注 ${game.LASTBET}')
                     if q > 0.5:                        
                         self.Talk(game, 'allin')
                     else:
@@ -121,8 +122,12 @@ class Player():
         else:
             if not self.cash:
                 pass
-            else:
-                ShowHand(self.hand)
+            else:         
+                print(f'当前底池 {game.POOL}')
+                print(f'你的手牌：{ShowHand(self.hand)}')
+                if game.STAGE >= 2:
+                    print(f'桌面：{ShowHand(game.TABLE)}')
+                    print(f'你的牌力：{self.combo}')
                 options = self.Options(game)
                 menu = TerminalMenu(options)
                 decision = menu.show()
@@ -138,7 +143,7 @@ class Player():
         else:
             if game.STAGE == 0:
                 if self.is_SB:
-                    options = ['call','fold']
+                    options = ['call','check','fold']
                 else:
                     options = ['call','raise','allin','fold',]
             else:
@@ -153,9 +158,11 @@ class Player():
     
     def Check(self, game):
         game.CHECKED = True
+        game.LASTBET = 0
     
     def Call(self, game):
         bet = game.LASTBET
+        self.logger.debug(f'{self.name}准备跟注 ${bet}')
         self.Bet(bet, game)
 
     def Raise(self, game):
@@ -164,10 +171,12 @@ class Player():
             self.Talk(game, 'allin')
         else:
             game.LASTBET = bet
+            self.logger.debug(f'{self.name}准备加注 ${bet}')
             self.Bet(bet, game)
 
     def AllIn(self, game):
         bet = self.cash
+        self.logger.debug(f'{self.name}准备全下 ${bet}')
         self.Bet(bet, game)
         game.LASTBET = bet
 
@@ -175,7 +184,8 @@ class Player():
         for i in range(len(game.PLAYERS)+1):
             if self.name == game.PLAYERS[i].name:
                 game.PLAYERS.pop(i)
-                print(f'{self.name}离开牌桌，还剩{len(game.PLAYERS)}家\n')
-                self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
+                left = '、'.join([p.name for p in game.PLAYERS])
+                print(f'{self.name}离开牌桌，还剩{left}')
+                #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
                 break
 
