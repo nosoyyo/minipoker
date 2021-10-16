@@ -3,3 +3,7 @@ class GameStageError(Exception):
 
 class OverBetError(Exception):
     pass
+
+class AllocateError(Exception):
+    pass
+

@@ -4,25 +4,28 @@
 import random
 import logging
 
-from thpoker.core import Hand, Table, Combo, Cards
-
 from exceptions import *
 from player import Player
-from utils import CORPUS, AI_NAMES, ShowHand
+from utils import CORPUS, AI_NAMES, ShowHand, SortCombo
 
 
-#TODO BB needs to call or fold when someone allin at preflop stage
+#ISSUE still actions after win
+#TODO the 1st player of flop round should be able to check
 #TODO CLI menu: 1/3 pool etc. helper
-#TODO winner decide 
+#TODO check winner and allocate money
+#TODO improve Pool
+#TODO BB needs to call or fold when someone allin at preflop stage
 #TODO manual/auto SB raise
+#ISSUE weird missing action of human player
 #TODO side pool regularization
 #TODO new game: SB/BB rotation
 #TODO BB preflop raise
 #TODO drawing calculation and related stuff(bluffing etc.)
-#TODO real powercheck
+#TODO real powercheck & probability helper
 #TODO stuff about nuts: powercheck & talk
-#TODO real AI
+#TODO real AI: characteristics
 #TODO random smalltalk
+#TODO game history & stats
 #TODO player/AI interact: trashtalk etc.
 #TODO unit tests
 #TODO UI
@@ -34,10 +37,18 @@ class Pool:
 
     def __init__(self) -> None:
         self.pools = [0]
+    
+    def __len__(self) -> int:
+        return len(self.pools)
 
-    def Add(self, name: str, bet: int, index=0)-> None:
+    def Add(self, name: str, bet: int, index=0) -> None:
         self.pools[index] += bet
         self.ShowPool(name, bet)
+
+    def Give(self, p, index=0):
+        p.cash += self.pools[index]
+        print(f'{p.name}赢了全部底池：${self.pools[index]}')
+        self.pools[index] = 0
 
     def Side(self, bet: int, index)-> None:
         #TODO
@@ -46,7 +57,7 @@ class Pool:
     def ShowPool(self, name, bet)-> None:
         print(f'{name}下注{bet}')
         if len(self.pools) == 1:
-            print(f'目前底池：{self.pools[0]}\n')
+            print(f'目前底池：{self.pools[0]}')
         else:
             #TODO
             pass
@@ -67,19 +78,10 @@ class Game():
         self.MakeUpAI(n_AI, cash)
         self.PLAYERS = self.AI + [self.PLAYER]
         random.shuffle(self.PLAYERS)
+        self.TrashTalk()
 
-        # distribute positions
-        self.PLAYERS[0].is_SB = True
-        self.PLAYERS[1].is_BB = True
-
-        # init trash talk phase
-        for p in self.PLAYERS:
-            q = random.random()
-            opponent = p.ChooseOpponent(self)
-            if q > 0.7:
-                p.Talk(self, 'trash', p=opponent)
-        self.LASTBET = self.BB
-        self.CHECKED = False
+        # distribue SB and BB
+        self.Rotate(self.PLAYERS)
 
         # :0: init
         # :1: preflop
@@ -87,6 +89,10 @@ class Game():
         # :3: turn
         # :4: river
         self.STAGE = 0
+
+        self.LASTBET = self.BB
+        self.WINNER = None
+        self.OVER = False
 
     def MakeUpAI(self, n_AI, cash):
         '''
@@ -115,6 +121,13 @@ class Game():
         random.shuffle(RawCards)
         return RawCards
 
+    def TrashTalk(self):
+        for p in self.PLAYERS:
+            q = random.random()
+            opponent = p.ChooseOpponent(self)
+            if q > 0.7:
+                p.Talk(self, 'trash', p=opponent)
+
     def Deal(self, player):
         card1 = self.RawCards.pop()
         card2 = self.RawCards.pop()
@@ -129,7 +142,7 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.Deal(self.PLAYERS[i])
             self.STAGE = 1
-            return
+            self.Allocate()
         else:
             self.logger.error(f'game.STAGE should be 0, now {self.STAGE}!')
             raise GameStageError()
@@ -144,6 +157,7 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)
             self.STAGE = 2
+            self.Allocate()
         else:
             self.logger.error(f'game.STAGE should be 1, now {self.STAGE}!')
             raise GameStageError()
@@ -158,6 +172,7 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)          
             self.STAGE = 3
+            self.Allocate()
 
         else:
             self.logger.error(f'game.STAGE should be 2, now {self.STAGE}!')
@@ -173,9 +188,53 @@ class Game():
             for i in range(len(self.PLAYERS)):
                 self.PLAYERS[i].Combo(self)
             self.STAGE = 4
+            self.Allocate()
         else:
             self.logger.error(f'game.STAGE should be 3, now {self.STAGE}!')
             raise GameStageError()
 
         print(f'current TABLE: {self.TABLE}\n')
 
+    def Allocate(self):
+        '''
+        check winner and allocate money
+        '''
+        if len(self.PLAYERS) == 1:
+            if len(self.POOL) == 1:
+                winner = self.PLAYERS[0]
+                self.POOL.Give(winner)
+                self.OVER = True
+            else:
+                #TODO side-pool situations
+                pass
+                self.OVER = True
+        elif self.STAGE == 4:
+            if len(self.POOL) == 1:
+                combos = [p.combo for p in self.PLAYERS]
+                combos = SortCombo(combos)
+                winner = ''
+                for p in self.PLAYERS:
+                    if p.combo == combos[-1]:
+                        winner = p
+                self.POOL.Give(winner)
+                self.OVER = True
+            else:
+                #TODO side-pool situations
+                pass
+                self.OVER = True
+
+    def Rotate(self):
+        r = self.PLAYERS.pop(0)
+        self.PLAYERS.append(r)
+
+        for i in range(len(self.PLAYERS)):
+            if i == 0:
+                self.PLAYERS[i].is_SB = True
+                self.PLAYERS[i].is_BB = False
+            elif i == 1:
+                self.PLAYERS[i].is_SB = False
+                self.PLAYERS[i].is_BB = True
+            else:
+                self.PLAYERS[i].is_SB = False
+                self.PLAYERS[i].is_BB = False
+                

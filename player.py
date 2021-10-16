@@ -1,7 +1,7 @@
 import time
 import random
 import logging
-from thpoker.core import Hand, Table, Combo, Cards
+from thpoker.core import Hand, Combo
 from simple_term_menu import TerminalMenu
 
 from exceptions import OverBetError
@@ -122,6 +122,7 @@ class Player():
             if not self.cash:
                 pass
             else:
+                ShowHand(self.hand)
                 options = self.Options(game)
                 menu = TerminalMenu(options)
                 decision = menu.show()
@@ -146,7 +147,7 @@ class Player():
                 else:
                     options = ['call','raise','allin','fold',]
 
-        self.logger.info(f'options: {options}')
+        self.logger.debug(f'options: {options}')
         return options
 
     
