@@ -25,12 +25,13 @@ def main():
 
         game.OVER = False
         game.NUMOFGAMES += 1
+        game.PLAYERS += game.WAITLIST
 
         game.TABLE = []
         game.RawCards = game.Shuffle()
 
         # init or re-init POOL
-        game.POOL = Pool()
+        game.POOL = Pool(len(game.PLAYERS))
 
         # must before game.Rotate()
         game.BuyIn()
@@ -47,12 +48,17 @@ def main():
         game.WINNER = None
 
         def Action():
+            print(f'\ncurrent TABLE: {game.TABLE}\n')
+
             for p in game.PLAYERS:
                 over = game.CheckState()
                 if over:
                     NewGame()
                 else:
                     p.Decide(game)
+            
+            if game.WAITLIST:
+                logger.debug(f'game.WAITLIST {game.WAITLIST}')
 
         # Preflop
         game.Preflop()

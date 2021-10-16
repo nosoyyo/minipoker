@@ -39,7 +39,8 @@ class Player():
             raise OverBetError(f'{self.name}不能下注 ${bet}，筹码只剩 ${self.cash} 了')
         else:
             self.cash -= bet
-            game.POOL.Add(self, bet)
+            game.POOL.Add(self, game, bet)
+            game.LASTBETPLAYER = self
         return game.POOL
 
     def Talk(self, game, command, p=None):
@@ -55,6 +56,8 @@ class Player():
             self.Call(game)
         elif command == 'raise':
             word = random.choice(CORPUS['RAISE'])
+            opponent = self.ChooseOpponent(game)
+            word = f'{word}，跟吗{opponent.name}'
             self.Raise(game)
         elif command == 'allin':
             word = random.choice(CORPUS['ALLIN'])
@@ -66,6 +69,8 @@ class Player():
             word = random.choice(CORPUS['BUYIN'])
         elif command == 'bye':
             word = random.choice(CORPUS['BYE'])
+        else:
+            word = command
         print(f'{self.name}：{word}\n')
 
     def Combo(self, game) -> Combo:
@@ -90,8 +95,14 @@ class Player():
         if self.is_AI:
             self.logger.debug(f'{self.name}行动')
             if not self.cash:
-                self.logger.info(f'{self.name}无筹码，跳过此轮')
-                pass
+                if game.STAGE > 1:
+                    self.logger.info(f'{self.name}无筹码，跳过此轮')
+                else:
+                    q = random.random()
+                    if q > 0.5:
+                        self.BuyIn()
+                    else:
+                        self.Bye()
             else:
                 print(f'{self.name}正在决策...')
                 s = random.random()
@@ -122,16 +133,18 @@ class Player():
                 elif power >= 90:
                     self.Talk(game, 'allin')
         else:
-            if not self.cash:
-                options = ['BUY IN', 'GAME OVER']
-                menu = TerminalMenu(options)
-                decision = menu.show()
-                decision = options[decision]
-                if decision == 'BUY IN':
-                    self.BuyIn()
-                else:
-                    game.Exit()
-            else:         
+            if game.OVER:
+                if not self.cash:
+                    options = ['BUY IN', 'GAME OVER']
+                    menu = TerminalMenu(options)
+                    decision = menu.show()
+                    decision = options[decision]
+                    if decision == 'BUY IN':
+                        self.BuyIn()
+                    else:
+                        game.Exit()
+            else:
+                print(f'{game.LASTBETPLAYER}刚才下注 {game.LASTBET}')
                 print(f'当前底池: ${game.POOL}')
                 print(f'你的筹码：${self.cash}，底池筹码比{game.Pool/self.cash:.2%}')
                 print(f'你的手牌：{ShowHand(self.hand)}')
@@ -166,15 +179,17 @@ class Player():
         return options
 
     def Check(self, game):
-        game.CHECKED = True
+        self.logger.debug(f'[Player] {self.name} [action] Check')
         game.LASTBET = 0
     
     def Call(self, game):
+        self.logger.debug(f'[Player] {self.name} [action] Call')
         bet = game.LASTBET
         self.logger.debug(f'{self.name}准备跟注 ${bet}')
         self.Bet(bet, game)
 
     def Raise(self, game):
+        self.logger.debug(f'[Player] {self.name} [action] Raise')
         bet  = game.SB * (int(random.random()*4) + 1) + game.LASTBET
         if bet >= self.cash:
             self.Talk(game, 'allin')
@@ -184,26 +199,31 @@ class Player():
             self.Bet(bet, game)
 
     def AllIn(self, game):
+        self.logger.debug(f'[Player] {self.name} [action] AllIn')
         bet = self.cash
         self.logger.debug(f'{self.name}准备全下 ${bet}')
         self.Bet(bet, game)
         game.LASTBET = bet
 
     def Fold(self, game):
+        self.logger.debug(f'[Player] {self.name} [action] Fold')
         index = self.GetSelfIndex(game)
         game.PLAYERS.pop(index)
         self.logger.debug(f'Player.Fold cause game.PLAYERS.pop({index})')
         left = '、'.join([p.name for p in game.PLAYERS])
         print(f'{self.name}离开牌桌，还剩{left}')
+        game.WAITLIST.append(self)
         #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
 
     def BuyIn(self, game):
+        self.logger.debug(f'[Player] {self.name} [action] BuyIn')
         self.cash += game.BUYIN
         self.logger.info(f'{self.name} 买入 ${game.BUYIN}，上桌')
-        self.Talk('buyin')
+        self.Talk(game, 'buyin')
     
     def Bye(self, game):
-        index = self.GetSelfIndex()
+        self.logger.debug(f'[Player] {self.name} [action] Bye')
+        index = self.GetSelfIndex(game)
         game.PLAYERS.pop(index)
         self.logger.info(f'{self.name} 下桌了')
         self.Talk('bye')

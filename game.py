@@ -10,7 +10,9 @@ from player import Player
 from utils import CORPUS, AI_NAMES, ShowHand, SortCombo
 
 
-#ISSUE SB should be able to check at Flop
+#ISSUE missing action in River stage
+#ISSUE BB should not be able to fold when it's BB
+#ISSUE player should be rejoin the game when a new game started
 #TODO manual/auto SB raise
 #TODO BB preflop raise
 #TODO the 1st player of flop round should be able to check
@@ -38,24 +40,26 @@ from utils import CORPUS, AI_NAMES, ShowHand, SortCombo
 
 class Pool:
 
-    def __init__(self) -> None:
-        self.pools = [0]
+    def __init__(self, n_players) -> None:
+        self.pools = [[0]]
+        self.pools = [[i for i in self.pools[0] for j in range(n_players)]]
     
     def __len__(self) -> int:
         return len(self.pools)
     
     def __repr__(self) -> str:
         #TODO
-        return str(self.pools[0])
+        return str(sum(self.pools[0]))
 
-    def Add(self, p: Player, bet: int, index=0) -> None:
-        self.pools[index] += bet
+    def Add(self, p: Player, game, bet: int, index=0) -> None:
+        pindex = p.GetSelfIndex(game)
+        self.pools[index][pindex] += bet
         self.ShowPool(p, bet)
 
     def Give(self, p, index=0):
-        p.cash += self.pools[index]
-        print(f'{p.name}赢了全部底池：${self.pools[index]}')
-        self.pools[index] = 0
+        p.cash += sum(self.pools[index])
+        print(f'{p.name}赢了全部底池：${sum(self.pools[index])}')
+        # here we do no clean, will do Pool.__init__ later in NewGame()
 
     def Side(self, bet: int, index)-> None:
         #TODO
@@ -64,7 +68,7 @@ class Pool:
     def ShowPool(self, p: Player, bet)-> None:
         print(f'{p.name}下注 ${bet}，剩余现金 ${p.cash}')
         if len(self.pools) == 1:
-            print(f'目前底池 ${self.pools[0]}')
+            print(f'目前底池 ${sum(self.pools[0])}')
         else:
             #TODO
             pass
@@ -79,15 +83,15 @@ class Game():
         self.NUMOFGAMES = 1
         self.TABLE = []
         self.RawCards = self.Shuffle()
-        self.POOL = Pool()
         self.SB = SB
         self.BB = SB*2
 
         self.PLAYER = Player(cash=buyin, is_AI=False)
         self.MakeUpAI(n_AI, buyin)
+        self.WAITLIST = []
         self.PLAYERS = self.AI + [self.PLAYER]
         random.shuffle(self.PLAYERS)
-        self.TrashTalk()
+        self.POOL = Pool(len(self.PLAYERS))
 
         # distribue SB and BB
         self.Rotate()
@@ -106,7 +110,7 @@ class Game():
     @property
     def Pool(self):
         #TODO
-        return self.POOL.pools[0]
+        return sum(self.POOL.pools[0])
 
     @property
     def SBPLAYER(self):
@@ -147,8 +151,13 @@ class Game():
         for p in self.PLAYERS:
             q = random.random()
             opponent = p.ChooseOpponent(self)
-            if q > 0.7:
+            if 0.6 < q < 0.9:
                 p.Talk(self, 'trash', p=opponent)
+            elif q > 0.9:
+                if opponent.name == self.SBPLAYER.name:
+                    p.Talk(self, f'建议是弃了😏少损失${self.SB}哈{opponent.name}')
+                elif opponent.name == self.BBPLAYER.name:
+                    p.Talk(self, f'哟{opponent.name}，这下必须损失${self.BB}了嗷')
 
     def BuyIn(self):
         for p in self.PLAYERS:
@@ -179,6 +188,7 @@ class Game():
 
     def Flop(self):
         print('\nFlop阶段\n')
+        self.LASTBET = 0
         if self.STAGE == 1:
             self.TABLE.append(self.RawCards.pop())
             self.TABLE.append(self.RawCards.pop())
@@ -190,11 +200,10 @@ class Game():
         else:
             self.logger.error(f'game.STAGE should be 1, now {self.STAGE}!')
             raise GameStageError()
-        print(f'current TABLE: {self.TABLE}\n')
 
     def Turn(self):
         print('\n转牌圈\n')
-
+        self.LASTBET = 0
         if self.STAGE == 2:
             self.TABLE.append(self.RawCards.pop())
             ShowHand(self.TABLE)
@@ -205,11 +214,10 @@ class Game():
         else:
             self.logger.error(f'game.STAGE should be 2, now {self.STAGE}!')
             raise GameStageError()
-        print(f'current TABLE: {self.TABLE}\n')
 
     def River(self):
         print('\n河牌圈\n')
-
+        self.LASTBET = 0
         if self.STAGE == 3:
             self.TABLE.append(self.RawCards.pop())
             ShowHand(self.TABLE)
@@ -219,8 +227,6 @@ class Game():
         else:
             self.logger.error(f'game.STAGE should be 3, now {self.STAGE}!')
             raise GameStageError()
-
-        print(f'current TABLE: {self.TABLE}\n')
 
     def CheckState(self):
         '''
@@ -260,3 +266,4 @@ class Game():
             sys.exit(0)
         except:
             print('bye👋🏻')
+
