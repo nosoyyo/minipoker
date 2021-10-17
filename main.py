@@ -1,7 +1,7 @@
 import random
 import logging
 
-from game import Game, Pool
+from game import Game
 
 
 logger = logging.getLogger('main')
@@ -18,73 +18,4 @@ logger.addHandler(fh)
 def main():
 
     game = Game()
-
-    def NewGame():
-
-        game.NUMOFGAMES += 1
-        print(f'\n第{game.NUMOFGAMES}局')
-
-        game.OVER = False
-        game.PLAYERS += game.WAITLIST
-        game.WAITLIST = []
-        for p in game.PLAYERS:
-            p.hand = []
-
-        game.TABLE = []
-        game.RawCards = game.Shuffle()
-
-        # init or re-init POOL
-        game.POOL = Pool(len(game.PLAYERS))
-
-        # must before game.Rotate()
-        game.BuyIn()
-
-        # distribute SB/BB
-        game.Rotate()
-        logger.info(f'{game.PLAYERS[0]}小盲')
-        logger.info(f'{game.PLAYERS[1]}大盲')
-
-        game.TrashTalk()
-
-        game.LASTBET = game.BB
-        game.STAGE = 0
-        game.WINNER = None
-
-        def Action():
-            print(f'\ncurrent TABLE: {game.TABLE}\n')
-
-            for p in game.PLAYERS:
-                over = game.CheckState()
-                if over:
-                    NewGame()
-                else:
-                    p.Decide(game)
-            
-            if game.WAITLIST:
-                logger.debug(f'game.WAITLIST {game.WAITLIST}')
-
-        # Preflop
-        game.Preflop()
-
-        game.SBPLAYER.Bet(game.SB, game)
-        game.BBPLAYER.Bet(game.BB, game)
-
-        for p in game.PLAYERS[2:]:
-            p.Decide(game)
-
-        for p in game.PLAYERS[:2]:
-            p.Decide(game)
-
-        # Flop
-        game.Flop()
-        Action()
-        
-        # Turn
-        game.Turn()
-        Action()
-
-        # River
-        game.River()
-        Action()
-
-    NewGame()
+    game.NewGame()

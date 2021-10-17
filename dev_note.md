@@ -13,6 +13,7 @@ reactions to one's action
 #FIXED the 1st player of flop round should be able to check
 
 # TODO
+#DONE add Player.WEALTH
 #TODO real powercheck based on 1~13, T+, TT+ and pocket pair etc.
 #TODO end-game summary, actually one more STAGE
 #TODO player lost all money should be move into a new list

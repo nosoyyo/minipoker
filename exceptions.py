@@ -7,3 +7,5 @@ class OverBetError(Exception):
 class AllocateError(Exception):
     pass
 
+class PlayerIndexError(Exception):
+    pass
