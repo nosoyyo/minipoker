@@ -59,6 +59,9 @@ class Positions():
 
     def __len__(self):
         return len(list(self.__dict__.keys()))
+    
+    def __repr__(self):
+        return self.__dict__.__str__()
 
     def Add(self, p):
         if self.AVAILABLE:
@@ -74,6 +77,17 @@ class Positions():
             flag = False
         return flag
 
+    def Rotate(self):
+        #self.BB = self.SB
+        players = [i for i in self.__dict__.values() if i]
+        players.append(players.pop(0))
+        self.Clear()
+        for i in range(len(players)):
+            self.__dict__[list(self.__dict__.keys())[i]]= players[i]
+
+    def Clear(self):
+        for k in list(self.__dict__.keys()):
+            self.__dict__[k] = None
 
 class Game():
     
@@ -99,13 +113,14 @@ class Game():
         if self.NUMOFGAMES == 1:
             for i in range(len(self.POSITIONS)-1):
                 self.WORLD.pop().BuyIn()
+            # human player get in here
             self.PLAYER.BuyIn()
         else:
             if self.POSITIONS.AVAILABLE:
                 self.WORLD.pop().BuyIn()
 
         # distribute SB/BB
-        self.Rotate()
+        self.POSITIONS.Rotate()
         self.logger.info(f'{self.PLAYERS[0]} 小盲')
         self.logger.info(f'{self.PLAYERS[1]} 大盲')
 
@@ -195,17 +210,6 @@ class Game():
     def TABLE(self):
         string = '/'.join(self._raw_table)
         return Table(string)
-
-    def POSITIONS(self):
-        '''
-        0 - SB
-        1 - BB
-        2 - UTG
-        3 - UTG + 1
-        4 - CO
-        5 - BT
-        '''
-        pass
 
     @property
     def WORLD(self):
@@ -327,10 +331,6 @@ class Game():
                 pass
                 self.OVER = True
         return self.OVER
-
-    def Rotate(self):
-        r = self.PLAYERS.pop(0)
-        self.PLAYERS.append(r)
                 
     def Exit(self):
         try:
