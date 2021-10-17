@@ -9,3 +9,9 @@ class AllocateError(Exception):
 
 class PlayerIndexError(Exception):
     pass
+
+class BuyInError(Exception):
+    pass
+
+class GameAlreadyFullError(Exception):
+    pass

@@ -4,6 +4,7 @@
 import sys
 import random
 import logging
+from typing import List
 from thpoker.core import Table
 
 from exceptions import *
@@ -28,16 +29,16 @@ class Pool:
         self.pools[index][p.INDEX] += bet
         self.ShowPool(p, bet)
 
-    def Give(self, p, index=0):
+    def Give(self, p, index=0) -> None:
         p.CASH += sum(self.pools[index])
-        print(f'{p.NAME}赢了全部底池：${sum(self.pools[index])}')
+        print(f'{p.NAME}以{p.COMBO}赢得全部底池：${sum(self.pools[index])}')
         # here we do no clean, will do Pool.__init__ later in NewGame()
 
-    def Side(self, bet: int, index)-> None:
+    def Side(self, bet: int, index) -> None:
         #TODO
         pass
 
-    def ShowPool(self, p: Player, bet)-> None:
+    def ShowPool(self, p: Player, bet) -> None:
         print(f'{p.NAME}下注 ${bet}，剩余现金 ${p.CASH}')
         if len(self.pools) == 1:
             print(f'目前底池 ${sum(self.pools[0])}')
@@ -46,11 +47,40 @@ class Pool:
             pass
 
 
+class Positions():
+
+    def __init__(self, n=6):
+        self.SB = None
+        self.BB = None
+        self.UTG = None
+        self.UTG1 = None
+        self.CO = None
+        self.BTN = None
+
+    def __len__(self):
+        return len(list(self.__dict__.keys()))
+
+    def Add(self, p):
+        if self.AVAILABLE:
+            key = random.choice(list(self.__dict__.keys()))
+            self.__dict__[key] = p
+        else:
+            raise GameAlreadyFullError()
+
+    @property
+    def AVAILABLE(self):
+        flag = True
+        if all(self.__dict__.values()):
+            flag = False
+        return flag
+
+
 class Game():
     
-    def __init__(self, n_AI=5, SB=5, buyin=600):
+    def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.self')
 
+        self.POSITIONS = Positions(n_AI)
         self.BUYIN = buyin
         self.NUMOFGAMES = 0
         self._raw_table = []
@@ -59,14 +89,38 @@ class Game():
         self.BB = SB*2
 
         self.PLAYER = Player(self, is_AI=False)
-        self.MakeUpAI(n_AI)
-        self.WAITLIST = []
-        self.PLAYERS = self.AI + [self.PLAYER]
-        random.shuffle(self.PLAYERS)
-        self.POOL = Pool(len(self.PLAYERS))
 
-        # distribue SB and BB
+    def NewGame(self) -> None:
+
+        self.NUMOFGAMES += 1
+        print(f'\n第{self.NUMOFGAMES}局')
+        self.OVER = False
+        
+        if self.NUMOFGAMES == 1:
+            for i in range(len(self.POSITIONS)-1):
+                self.WORLD.pop().BuyIn()
+            self.PLAYER.BuyIn()
+        else:
+            if self.POSITIONS.AVAILABLE:
+                self.WORLD.pop().BuyIn()
+
+        # distribute SB/BB
         self.Rotate()
+        self.logger.info(f'{self.PLAYERS[0]} 小盲')
+        self.logger.info(f'{self.PLAYERS[1]} 大盲')
+
+        self.TrashTalk()
+
+        self.LASTBET = self.BB
+        self.WINNER = None
+
+        for p in self.PLAYERS:
+            p._raw_hand = []  
+        self._raw_table = []
+        self.RAWCARDS = self.Shuffle()
+
+        # init or re-init POOL
+        self.POOL = Pool(len(self.PLAYERS))
 
         ''' 
         0 - Init
@@ -76,11 +130,53 @@ class Game():
         4 - River
         5 - Summary
         '''
-        self.STAGE = 0
+        self.STAGE = 0 
 
-        self.LASTBET = self.BB
-        self.WINNER = None
-        self.OVER = False
+        def Action():
+            print(f'\n当前桌面: {self.TABLE}\n')
+
+            for p in self.PLAYERS:
+                over = self.CheckState()
+                if over:
+                    self.NewGame()
+                else:
+                    p.Decide()
+            
+            # match everyone's bet
+            for p in self.PLAYERS:
+                if p.LASTBET != self.LASTBET:
+                    p.Decide()
+            
+            if self.OFFTABLE:
+                self.logger.debug(f'self.OFFTABLE {self.OFFTABLE}')
+
+        # Preflop Action
+        self.Preflop()
+
+        self.logger.info(f'盲注开始\n')
+        self.SBPLAYER.Bet(self.SB)
+        self.BBPLAYER.Bet(self.BB)
+        self.logger.info(f'盲注下好\n')
+
+        for p in self.PLAYERS[2:]:
+            p.Decide()
+
+        # match everyone's bet
+        for p in self.PLAYERS:
+            if p.LASTBET != self.LASTBET:
+                p.Decide()
+
+        # Flop
+        self.Flop()
+        Action()
+        
+        # Turn
+        self.Turn()
+        Action()
+
+        # River
+        self.River()
+        Action()
 
     @property
     def Pool(self):
@@ -100,7 +196,7 @@ class Game():
         string = '/'.join(self._raw_table)
         return Table(string)
 
-    def MakeUpAI(self, n_AI):
+    def POSITIONS(self):
         '''
         0 - SB
         1 - BB
@@ -109,12 +205,14 @@ class Game():
         4 - CO
         5 - BT
         '''
-        self.AI = []
+        pass
+
+    @property
+    def WORLD(self):
         random.shuffle(AI_NAMES)
-        result = AI_NAMES[:n_AI]
-        result = list(map(lambda x: Player(self, name=x), result))
+        result = list(map(lambda x: Player(self, name=x), AI_NAMES))
         random.shuffle(result)
-        self.AI = result
+        return set(result)
     
     def Shuffle(self):
         num_list = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
@@ -139,22 +237,9 @@ class Game():
                 elif opponent.NAME == self.BBPLAYER.NAME:
                     p.Talk(f'哟{opponent.NAME}，这下必须损失${self.BB}了嗷')
 
-    def BuyIn(self):
-        for p in self.PLAYERS:
-            if not p.CASH:
-                q = random.random()
-                if q > 0.5:
-                    p.BuyIn()
-                else:
-                    p.Bye()
-
-    def Deal(self, player):
-        card1 = self.RAWCARDS.pop()
-        self.logger.debug(f'给{player.NAME}发了一张{card1}')
-        player.Draw(card1)
-        card2 = self.RAWCARDS.pop()
-        self.logger.debug(f'给{player.NAME}发了一张{card2}\n')
-        player.Draw(card2)
+    def Deal(self, p):
+        p._raw_hand = random.sample(self.RAWCARDS, 2)
+        self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
  
     def Preflop(self):
         print(f'\n第{self.NUMOFGAMES}局 Preflop阶段\n')
@@ -165,37 +250,39 @@ class Game():
         else:
             self.logger.error(f'self.STAGE should be 0, now {self.STAGE}!')
             raise GameStageError()
+        self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
 
     def Flop(self):
         print(f'\n第{self.NUMOFGAMES}局 Flop阶段\n')
+        self.LASTBETPLAYER = None
         self.LASTBET = 0
         if self.STAGE == 1:
-            card1 = self.RAWCARDS.pop()
-            card2 = self.RAWCARDS.pop()
-            card3 = self.RAWCARDS.pop()
-            self._raw_table = [card1, card2, card3]
+            self._raw_table = random.sample(self.RAWCARDS, 3)
             for p in self.PLAYERS:
                 p.Combo()
             self.STAGE = 2
         else:
             self.logger.error(f'self.STAGE should be 1, now {self.STAGE}!')
             raise GameStageError()
+        self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
 
     def Turn(self):
         print(f'\n第{self.NUMOFGAMES}局 转牌圈\n')
+        self.LASTBETPLAYER = None
         self.LASTBET = 0
         if self.STAGE == 2:
             self._raw_table.append(self.RAWCARDS.pop())
             for p in self.PLAYERS:
                 p.Combo()          
             self.STAGE = 3
-
         else:
             self.logger.error(f'self.STAGE should be 2, now {self.STAGE}!')
             raise GameStageError()
+        self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
 
     def River(self):
         print(f'\n第{self.NUMOFGAMES}局 河牌圈\n')
+        self.LASTBETPLAYER = None
         self.LASTBET = 0
         if self.STAGE == 3:
             self._raw_table.append(self.RAWCARDS.pop())
@@ -205,8 +292,10 @@ class Game():
         else:
             self.logger.error(f'self.STAGE should be 3, now {self.STAGE}!')
             raise GameStageError()
+        self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
 
     def Summary(self):
+        self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
         if self.STAGE == 4:
             pass
 
@@ -248,72 +337,3 @@ class Game():
             sys.exit(0)
         except:
             print('bye👋🏻')
-
-
-    def NewGame(self):
-
-        self.NUMOFGAMES += 1
-        print(f'\n第{self.NUMOFGAMES}局')
-
-        self.OVER = False
-        self.PLAYERS += self.WAITLIST
-        self.WAITLIST = []
-        for p in self.PLAYERS:
-            p._raw_hand = []
-
-        self._raw_table = []
-        self.RAWCARDS = self.Shuffle()
-
-        # init or re-init POOL
-        self.POOL = Pool(len(self.PLAYERS))
-
-        # must before self.Rotate()
-        self.BuyIn()
-
-        # distribute SB/BB
-        self.Rotate()
-        self.logger.info(f'{self.PLAYERS[0]}小盲')
-        self.logger.info(f'{self.PLAYERS[1]}大盲')
-
-        self.TrashTalk()
-
-        self.LASTBET = self.BB
-        self.STAGE = 0
-        self.WINNER = None
-
-        def Action():
-            print(f'\n当前桌面: {self.TABLE}\n')
-
-            for p in self.PLAYERS:
-                over = self.CheckState()
-                if over:
-                    self.NewGame()
-                else:
-                    p.Decide()
-            
-            if self.WAITLIST:
-                self.logger.debug(f'self.WAITLIST {self.WAITLIST}')
-
-        # Preflop
-        self.Preflop()
-
-        self.SBPLAYER.Bet(self.SB)
-        self.BBPLAYER.Bet(self.BB)
-
-        for p in self.PLAYERS[2:]:
-            p.Decide()
-
-        for p in self.PLAYERS[:2]:
-            p.Decide()
-
-        # Flop
-        self.Flop()
-        Action()
-        
-        # Turn
-        self.Turn()
-        Action()
-
-        # River
-        self.River()
-        Action()

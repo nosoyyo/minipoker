@@ -3,16 +3,17 @@ match every player's bet within one round
 reactions to one's action
 
 # ISSUE
+#ISSUE repeated Player fucking everywhere
 #ISSUE all in guy still can all in
 #ISSUE every one can call $0 @game.Turn
 #ISSUE wrong game.NUMOFGAMES
 #ISSUE wrong SB/BB order after NewGame(), should add TABLEPOSITION
-#FIXED repeated Player in game.WAITLIST
 #FIXED game.PLAYERS.hand not refreshed after NextGame()
 #ISSUE missing action in River stage
 #FIXED the 1st player of flop round should be able to check
 
 # TODO
+#TODO 上桌机制
 #DONE add Player.WEALTH
 #TODO real powercheck based on 1~13, T+, TT+ and pocket pair etc.
 #TODO end-game summary, actually one more STAGE
