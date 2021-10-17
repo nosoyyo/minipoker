@@ -114,7 +114,7 @@ class Player():
             pass
         def CheckTPlus():
             pass
-        if self.game.STAGE < 2:
+        if self.game._stage < 2:
             flush = CheckFlush()
             stra = CheckStraight()
             pair = CheckPair()
@@ -131,18 +131,11 @@ class Player():
         return opponent
 
     def Decide(self):
-        if self.IS_AI:
+        if self.IS_AI and self.ONTABLE:
             self.logger.debug(f'{self} 行动')
             self.logger.debug(f'{self.NAME}手牌：{self.HAND}')
             if not self.CASH:
-                if self.game.STAGE > 1:
-                    self.logger.info(f'{self.NAME}无筹码，跳过此轮')
-                else:
-                    q = random.random()
-                    if q > 0.5:
-                        self.BuyIn()
-                    else:
-                        self.Bye()
+                self.logger.info(f'{self.NAME}无筹码，跳过此轮')
             else:
                 self.logger.info(f'{self.NAME}正在决策...')
                 s = random.random() + 1
@@ -156,8 +149,9 @@ class Player():
                     pass
                 else:
                     if self.CASH <= self.game.LASTBET:
+                        #TODO: q would be generated from personality
                         q = random.random()
-                        if q > 0.5:                        
+                        if q > 0.5:
                             self.Talk('allin')
                         else:
                             self.Talk('fold')
@@ -196,11 +190,11 @@ class Player():
                         self.BuyIn()
                     else:
                         self.game.Exit()
-            else:
+            elif self.ONTABLE:
                 print(f'{self.game.LASTBETPLAYER}刚才下注 {self.game.LASTBET}')
-                print(f'当前底池: ${self.game.POOL}')
+                print(f'当前底池: {self.game.POOL}')
                 print(f'你的手牌：{self.HAND}')
-                if self.game.STAGE >= 2:
+                if self.game._stage >= 2:
                     print(f'桌面：{self.game.TABLE}')
                     print(f'你的牌力：{self.COMBO}')
 
@@ -227,8 +221,8 @@ class Player():
         if self.game.LASTBET >= self.CASH:
             options = ['allin', 'fold']
         else:
-            if self.game.STAGE == 0:
-                if self.NAME == self.game.SBPLAYER.NAME:
+            if self.game._stage == 0:
+                if self is self.game.POSITONS.SB:
                     options = ['call','check','fold']
                 else:
                     options = ['call','raise','allin','fold',]
@@ -247,13 +241,14 @@ class Player():
     
     def Call(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Call')
-        bet = self.game.LASTBET
+        bet = self.game.LASTBET - self.LASTBET
         self.logger.debug(f'{self.NAME}准备跟注 ${bet}')
         self.Bet(bet)
 
     def Raise(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Raise')
-        bet  = self.game.SB * (int(random.random()*4) + 1) + self.game.LASTBET
+        q = int(random.random()* 4) + 1
+        bet  = self.game.SB * q + self.game.LASTBET - self.LASTBET
         if bet >= self.CASH:
             self.Talk('allin')
         else:
@@ -270,31 +265,19 @@ class Player():
 
     def Fold(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Fold')
-        pop = self.game.PLAYERS.pop(self.INDEX)
-        try:
-            assert pop is self
-        except:
-            raise PlayerIndexError()
+        self.ONTABLE = False
         left = '、'.join([p.NAME for p in self.game.PLAYERS])
         print(f'{self.NAME}离开牌桌，还剩{left}')
-        self.game.OFFTABLE.append(pop)
         #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
 
     def BuyIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] BuyIn')
-        try:
-            try:
-                self.game.POSITIONS.Add(self)
-            except GameAlreadyFullError:
-                print(f'目前没有空余座位！')
-        except:
-            raise BuyInError()
-        else:
-            self.CASH += self.game.BUYIN
-            self.ONTABLE = True
-            self.BUYINTIMES += 1
-            self.logger.info(f'{self.NAME} 买入 ${self.game.BUYIN}，上桌')
-            self.Talk('buyin')
+        self.game.POSITIONS.Add(self)
+        self.CASH += self.game.BUYIN
+        self.ONTABLE = True
+        self.BUYINTIMES += 1
+        self.logger.info(f'{self.NAME} 买入 ${self.game.BUYIN}，上桌')
+        self.Talk('buyin')
     
     def Bye(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Bye')
