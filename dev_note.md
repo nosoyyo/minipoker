@@ -1,6 +1,9 @@
 # HIGHEST PRIORITY
-match every player's bet within one round
-reactions to one's action
+#TODO rewrite game logic
+#ISSUE match every player's bet within one round
+#DONE add Positions.Remove
+#DONE adjust Player.Bye
+#TODO offtable player need to get on when NewGame()
 
 # ISSUE
 #ISSUE repeated Player fucking everywhere
@@ -27,6 +30,7 @@ reactions to one's action
 #TODO player/AI interact: trashtalk etc.
 
 # IMPROVEMENT
+#TODO reactions to one's action
 #DONE improve Pool: seperate every bet
 #DONE game.SBPLAYER and game.BBPLAYER
 #TODO side pool regularization

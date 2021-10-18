@@ -22,8 +22,15 @@ class World:
 
     AI_NAMES_NETRED = ['特师',]
 
-    def __init__(self):
+    def __init__(self, game):
         random.shuffle(self.AI_NAMES)
-        result = list(map(lambda x: Player(self, name=x), self.AI_NAMES))
-        random.shuffle(result)
-        self.PLAYERS =  set(result)
+        players = [Player(game, name=name) for name in self.AI_NAMES]
+        random.shuffle(players)
+        self.PLAYERS = set(players)
+
+    def __repr__(self):
+        pl = '\n'.join([p.NAME for p in self.PLAYERS])
+        return f'世界上的玩家：\n\n{pl}'
+
+    def pop(self):
+        return self.PLAYERS.pop()

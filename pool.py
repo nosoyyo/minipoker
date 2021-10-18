@@ -1,5 +1,9 @@
 import logging
 
+
+logger = logging.getLogger('game.Pool.Add')
+
+
 class Pool:
 
     def __init__(self, n_players) -> None:
@@ -15,8 +19,8 @@ class Pool:
         return f'${s}: {self.pools}'
 
     def Add(self, p, bet: int, index=0) -> None:
-        logger = logging.getLogger('game.Pool.Add')
         self.pools[index][p.INDEX] += bet
+        logger.debug(self.pools)
 
     def EVEN(self, index=0):
         flag = False

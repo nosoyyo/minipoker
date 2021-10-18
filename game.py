@@ -9,17 +9,18 @@ from thpoker.core import Table
 
 from pool import Pool
 from exceptions import *
-from player import Player
-from positions import Positions
 from world import World
-from utils import CORPUS, SortCombo
+from player import Player
+from corpus import CORPUS
+from utils import SortCombo
+from positions import Positions
 
 
 class Game():
     
     def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.self')
-        self.WORLD = World()
+        self.WORLD = World(self)
         self.POSITIONS = Positions(n_AI)
         self.BUYIN = buyin
         self.NUMOFGAMES = 0
@@ -38,29 +39,33 @@ class Game():
     def NewGame(self) -> None:
 
         self.NUMOFGAMES += 1
-        print(f'\n第{self.NUMOFGAMES}局')
+        print(f'\n第 {self.NUMOFGAMES} 局')
         self.OVER = False
-        
+
+        # get on the table dudes
         if self.NUMOFGAMES == 1:
             for i in range(len(self.POSITIONS)-1):
-                #self.logger.debug(f'self.WORLD {self.WORLD}')
+                self.logger.debug(f'game.NewGame: i {i}')
                 p = self.WORLD.pop()
-                #self.logger.debug(f'p {p}')
+                self.logger.debug(f'self.WORLD.pop() => {p}')
                 p.BuyIn()
+                self.logger.debug(f'self.POSITIONS {self.POSITIONS}')
             # human player get in here
             self.PLAYER.BuyIn()
         else:
+            for p in self.PLAYERS:
+                p.ONTABLE = True
+            # rotate, redistribute SB/BB
+            self.POSITIONS.Rotate()
+            self.logger.info(f'{self.POSITIONS.SB} 小盲')
+            self.logger.info(f'{self.POSITIONS.BB} 大盲')
             if self.POSITIONS.AVAILABLE:
                 self.WORLD.pop().BuyIn()
-
-        # distribute SB/BB
-        self.POSITIONS.Rotate()
-        self.logger.info(f'{self.POSITIONS.SB} 小盲')
-        self.logger.info(f'{self.POSITIONS.BB} 大盲')
 
         self.LASTBET = self.BB
         self.WINNER = None
 
+        # init Player.HAND and game.TABLE
         for p in self.PLAYERS:
             p._raw_hand = []  
             self.Deal(p)
@@ -116,15 +121,10 @@ class Game():
         self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
  
     def NewRound(self):
-        print(f'\n第{self.NUMOFGAMES}局 {self.STAGE}\n')
-        self.LASTBETPLAYER = None
-        self.LASTBET = 0
+        print(f'\n第 {self.NUMOFGAMES} 局 {self.STAGE}\n')
+        self.LASTACTION = {}
 
         if self._stage == 0:
-            self.logger.info(f'盲注开始\n')
-            self.POSITIONS.SB.Bet(self.SB)
-            self.POSITIONS.BB.Bet(self.BB)
-            self.logger.info(f'盲注下好\n')
             self.Action()
         elif self._stage == 1:
             self._raw_table = random.sample(self.RAWCARDS, 3)
@@ -135,31 +135,48 @@ class Game():
             self._raw_table.append(self.RAWCARDS.pop())
             self.Action()
 
-        self._stage += 1
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
 
     def Action(self):
         print(f'\n当前桌面: {self.TABLE}\n')
 
-        for p in self.PLAYERS:
-            p.LASTBET = 0
+        if self._stage == 0:
+            for p in self.PLAYERS:
+                p.LASTBET = 0
+                if p.SB:
+                    p.Bet(self.SB)
+                elif p.BB:
+                    p.Bet(self.BB)
+                    self._stage += 1
+                else:
+                    p.Decide()
+        else:
             over = self.CheckState()
             if over:
                 self.Summary()
-                self.NewGame()
             else:
-                p.Decide()
-        
-        # match everyone's bet
-        for p in self.PLAYERS:
-            while not self.POOL.EVEN:
-                p.Decide()
-                if self.POOL.EVEN:
-                    break
+                for p in self.PLAYERS:
+                    if not p.GOOD:
+                        p.Decide()
+
+        if all([p.GOOD for p in self.PLAYERS]):
+            self._stage += 1
+            self.NewRound()
+        else:
+            self.Action()
 
     def Summary(self):
         self.POOL.Give(self.WINNER)
-        print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池：${self.POOL}')
+        if self.TABLE:
+            print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池：${self.POOL}')
+        else:
+            print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池：${self.POOL}')
+
+        # losers say bye
+        for p in self.PLAYERS:
+            if not p.CASH:
+                p.Bye()
+
         input('Press ENTER to continue...\n')
         self.NewGame()
 

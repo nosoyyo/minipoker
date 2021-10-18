@@ -4,7 +4,7 @@ import logging
 from thpoker.core import Hand, Combo
 from simple_term_menu import TerminalMenu
 
-from utils import CORPUS
+from corpus import CORPUS
 from exceptions import GameAlreadyFullError, OverBetError, PlayerIndexError, BuyInError
 
 
@@ -18,12 +18,15 @@ class Player():
             name = 'arslan'
         self.NAME = name
         self.IS_AI = is_AI
+        self.SB = False
+        self.BB = False
         self._raw_hand = [] #:List:
         self.CASH = 0
         self.COMBO = None
         self.BUYINTIMES = 0
         self.LASTBET = 0
         self.ONTABLE = False
+        self.GOOD = False
 
     def __repr__(self) -> str:
         info = f'<{self.NAME} 总盈亏${self.WEALTH} 筹码${self.CASH}>'
@@ -56,27 +59,29 @@ class Player():
 
     def Bet(self, bet):
         if self.CASH < bet:
-            raise OverBetError(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
+            self.logger.fatal(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
+            raise OverBetError()
         else:
+            self.logger.info(f'[Player] {self.NAME} [Bet] {bet}')
             self.CASH -= bet
             self.game.POOL.Add(self, bet)
-            self.game.LASTBETPLAYER = self
+            self.game.LASTACTION = {self:bet}
             self.LASTBET = bet
         return self.game.POOL
 
     def Talk(self, command, p=None):
         time.sleep(0.3)
         if command == 'fold':
-            word = random.choice(CORPUS['FOLD'])      
+            word = random.choice(CORPUS.FOLD)      
             self.Fold()      
         elif command == 'check':
-            word = random.choice(CORPUS['CHECK'])
+            word = random.choice(CORPUS.CHECK)
             self.Check()
         elif command == 'call':
-            word = random.choice(CORPUS['CALL'])
+            word = random.choice(CORPUS.CALL)
             self.Call()
         elif command == 'raise':
-            word = random.choice(CORPUS['RAISE'])
+            word = random.choice(CORPUS.RAISE)
             oindex = self.INDEX + 1
             if oindex > len(self.game.PLAYERS) - 2:
                 oindex = 0
@@ -84,15 +89,15 @@ class Player():
             word = f'{word}，敢跟吗{opponent.NAME}'
             self.Raise()
         elif command == 'allin':
-            word = random.choice(CORPUS['ALLIN'])
+            word = random.choice(CORPUS.ALLIN)
             self.AllIn()
         elif command == 'trash':
-            trash = random.choice(CORPUS['TRASHTALK'])
+            trash = random.choice(CORPUS.TRASHTALK)
             word = f'{trash}{p.NAME}'
         elif command == 'buyin':
-            word = random.choice(CORPUS['BUYIN'])
+            word = random.choice(CORPUS.BUYIN)
         elif command == 'bye':
-            word = random.choice(CORPUS['BYE'])
+            word = random.choice(CORPUS.BYE)
         else:
             word = command
         print(f'{self.NAME}：{word}\n')
@@ -140,7 +145,7 @@ class Player():
                 self.logger.info(f'{self.NAME}正在决策...')
                 s = random.random() + 1
                 time.sleep(s)
-                self.logger.debug(f'{self.NAME}现金 ${self.CASH}，当前由{self.game.LASTBETPLAYER}下注 ${self.game.LASTBET}')
+                self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
 
                 power = self.PowerCheck() #TODO
                 self.logger.debug(f'Player.PowerCheck() => {power}')
@@ -191,7 +196,7 @@ class Player():
                     else:
                         self.game.Exit()
             elif self.ONTABLE:
-                print(f'{self.game.LASTBETPLAYER}刚才下注 {self.game.LASTBET}')
+                self.logger.info(f'game.LASTACTION {self.game.LASTACTION}')
                 print(f'当前底池: {self.game.POOL}')
                 print(f'你的手牌：{self.HAND}')
                 if self.game._stage >= 2:
@@ -222,7 +227,7 @@ class Player():
             options = ['allin', 'fold']
         else:
             if self.game._stage == 0:
-                if self is self.game.POSITONS.SB:
+                if self.SB:
                     options = ['call','check','fold']
                 else:
                     options = ['call','raise','allin','fold',]
@@ -244,6 +249,7 @@ class Player():
         bet = self.game.LASTBET - self.LASTBET
         self.logger.debug(f'{self.NAME}准备跟注 ${bet}')
         self.Bet(bet)
+        self.GOOD = True
 
     def Raise(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Raise')
@@ -255,6 +261,11 @@ class Player():
             self.game.LASTBET = bet
             self.logger.debug(f'{self.NAME}准备加注 ${bet}')
             self.Bet(bet)
+            self.GOOD = True
+        # this makes other ONTABLE Players not GOOD
+        for p in self.game.PLAYERS:
+            if p is not self:
+                p.GOOD = False
 
     def AllIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] AllIn')
@@ -262,6 +273,7 @@ class Player():
         self.logger.debug(f'{self.NAME}准备全下 ${bet}')
         self.Bet(bet)
         self.game.LASTBET = bet
+        self.GOOD = True
 
     def Fold(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Fold')
@@ -281,8 +293,7 @@ class Player():
     
     def Bye(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Bye')
-        self.game.PLAYERS.pop(self.INDEX)
-        self.game.ONTABLE.remove(self)
+        self.game.POSITIONS.Remove(self)
         self.logger.info(f'{self.NAME} 下桌了')
         self.game.WORLD.add(self)
         self.Talk('bye')
