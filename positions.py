@@ -32,14 +32,20 @@ class Positions():
             logger.debug(f'key {key}')
             self.__dict__[key] = p
             p.__dict__[key] = True
+            p.POSITION = key
             logger.debug(f'game.POSITIONS.__dict__ {self.__dict__}')
         else:
             raise GameAlreadyFullError()
 
-    def Remove(self, p):
-        for k in [k for k in self.__dict__.keys()]:
-            if k in p.__dict__.keys() and p.__dict__[k]:
-                self.__dict__.pop(k)
+    def Remove(self, p) -> bool:
+        flag = False
+        try:
+            self.__dict__[p.POSITION] = None
+        except:
+            flag = False
+        else:
+            flag = True
+        return flag
 
     @property
     def AVAILABLE(self):
@@ -49,6 +55,8 @@ class Positions():
         return flag
 
     def Rotate(self):
+        logger.debug(f'POSITIONS before Rotate {self}')
+
         #clear Player.SB etc.
         for k in self.__dict__.keys():
             p = self.__dict__[k]
@@ -64,6 +72,8 @@ class Positions():
         for k in self.__dict__.keys():
             p = self.__dict__[k]
             p.__dict__[k] = True
+        
+        logger.debug(f'POSITIONS after Rotate {self}')
 
     def Clear(self):
         for k in list(self.__dict__.keys()):

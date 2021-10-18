@@ -5,7 +5,7 @@ from game import Game
 
 
 logger = logging.getLogger('main')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter('[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s')
 sh = logging.StreamHandler()
 fh = logging.FileHandler('main.log')

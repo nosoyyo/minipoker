@@ -18,6 +18,7 @@ class Player():
             name = 'arslan'
         self.NAME = name
         self.IS_AI = is_AI
+        self.POSITION = None
         self.SB = False
         self.BB = False
         self._raw_hand = [] #:List:
@@ -29,6 +30,8 @@ class Player():
 
     def __repr__(self) -> str:
         info = f'<{self.NAME} 总盈亏${self.WEALTH} 筹码${self.CASH}>'
+        if self.POSITION:
+            info = f'[{self.POSITION}] {info}'
         if self.INDEX:
             info = f'[{self.INDEX}] {info}'
         return info
@@ -63,7 +66,7 @@ class Player():
             self.logger.fatal(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
             raise OverBetError()
         else:
-            self.logger.info(f'[Player] {self.NAME} [Bet] {bet}')
+            self.logger.info(f'{self} [Bet] {bet}')
             self.CASH -= bet
             self.game.POOL.Add(self, bet)
             self.game.LASTACTION = {self:bet}
@@ -289,9 +292,10 @@ class Player():
     
     def Bye(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Bye')
+        self.game.POSITIONS.Remove(self)
+        self.logger.info(f'{self.NAME}下桌了')
+
         if self.IS_AI:
-            self.game.POSITIONS.Remove(self)
-            self.logger.info(f'{self.NAME}下桌了')
             self.game.WORLD.Add(self)
             self.Talk('bye')
         else:

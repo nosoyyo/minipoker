@@ -54,8 +54,9 @@ class Game():
             # human player get in here
             self.PLAYER.BuyIn()
         else:
-            for p in self.PLAYERS:
-                p.ONTABLE = True
+            ps = [i for i in self.POSITIONS.__dict__.values() if i]
+            for player in ps:
+                player.ONTABLE = True
             # rotate, redistribute SB/BB
             self.POSITIONS.Rotate()
             self.logger.info(f'{self.POSITIONS.SB} 小盲')
@@ -118,10 +119,10 @@ class Game():
         return RawCards
 
     def Deal(self, p, method='decisive'):
-        if method is 'decisive':
+        if method == 'decisive':
             p._raw_hand = random.sample(self.RAWCARDS, 2)
             self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
-        elif method is 'dynamic':
+        elif method == 'dynamic':
             pass
  
     def NewRound(self):
@@ -140,6 +141,7 @@ class Game():
             self.Action()
 
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
+        input('Press ENTER to continue...\n')
 
     def Action(self):
         print(f'\n当前桌面: {self.TABLE}\n')
@@ -161,29 +163,28 @@ class Game():
                 self.Summary()
             else:
                 for p in self.PLAYERS:
+                    self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
+
                     # SB dont forget SB
                     if p.SB and not self.BLIND:
                         p.Bet(self.SB)
                         self.logger.info(f'[SB] {p.NAME} 补上小盲 ${self.SB}')
                         self.BLIND = True
 
-                    # generate COMBO if TABLE
-                    try:
-                        if self.TABLE:
-                            self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
-                    except:
-                        self.logger.debug(f'{p.NAME} 还没翻牌！')
-
                     # everyone must match their bets
                     if not p.GOOD:
                         p.Decide()
                 print(f'-----------------')
 
-        #check if all Players are GOOD
+        #check if all Players are GOOD or if game over
         self.logger.debug(f'all Players.GOOD? {[p.GOOD for p in self.PLAYERS]}')
         if all([p.GOOD for p in self.PLAYERS]):
-            self._stage += 1
-            self.NewRound()
+            over = self.CheckState()
+            if over:
+                self.Summary()
+            else:
+                self._stage += 1
+                self.NewRound()
         else:
             self.Action()
         
