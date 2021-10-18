@@ -19,7 +19,7 @@ from positions import Positions
 class Game():
     
     def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
-        self.logger = logging.getLogger('main.self')
+        self.logger = logging.getLogger('main.game')
         self.WORLD = World(self)
         self.POSITIONS = Positions(n_AI)
         self.BUYIN = buyin
@@ -41,15 +41,16 @@ class Game():
         self.NUMOFGAMES += 1
         print(f'\n第 {self.NUMOFGAMES} 局')
         self.OVER = False
+        self.BLIND = False
 
         # get on the table dudes
         if self.NUMOFGAMES == 1:
             for i in range(len(self.POSITIONS)-1):
-                self.logger.debug(f'game.NewGame: i {i}')
+                #self.logger.debug(f'game.NewGame: i {i}')
                 p = self.WORLD.pop()
-                self.logger.debug(f'self.WORLD.pop() => {p}')
+                #self.logger.debug(f'self.WORLD.pop() => {p}')
                 p.BuyIn()
-                self.logger.debug(f'self.POSITIONS {self.POSITIONS}')
+                #self.logger.debug(f'self.POSITIONS {self.POSITIONS}')
             # human player get in here
             self.PLAYER.BuyIn()
         else:
@@ -116,9 +117,12 @@ class Game():
         random.shuffle(RawCards)
         return RawCards
 
-    def Deal(self, p):
-        p._raw_hand = random.sample(self.RAWCARDS, 2)
-        self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
+    def Deal(self, p, method='decisive'):
+        if method is 'decisive':
+            p._raw_hand = random.sample(self.RAWCARDS, 2)
+            self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
+        elif method is 'dynamic':
+            pass
  
     def NewRound(self):
         print(f'\n第 {self.NUMOFGAMES} 局 {self.STAGE}\n')
@@ -126,7 +130,7 @@ class Game():
 
         if self._stage == 0:
             self.Action()
-        elif self._stage == 1:
+        elif self._stage == 2:
             self._raw_table = random.sample(self.RAWCARDS, 3)
             self.Action()
         elif self._stage == 5:
@@ -150,27 +154,47 @@ class Game():
                     self._stage += 1
                 else:
                     p.Decide()
+                print(f'-----------------')
         else:
             over = self.CheckState()
             if over:
                 self.Summary()
             else:
                 for p in self.PLAYERS:
+                    # SB dont forget SB
+                    if p.SB and not self.BLIND:
+                        p.Bet(self.SB)
+                        self.logger.info(f'[SB] {p.NAME} 补上小盲 ${self.SB}')
+                        self.BLIND = True
+
+                    # generate COMBO if TABLE
+                    try:
+                        if self.TABLE:
+                            self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
+                    except:
+                        self.logger.debug(f'{p.NAME} 还没翻牌！')
+
+                    # everyone must match their bets
                     if not p.GOOD:
                         p.Decide()
+                print(f'-----------------')
 
+        #check if all Players are GOOD
+        self.logger.debug(f'all Players.GOOD? {[p.GOOD for p in self.PLAYERS]}')
         if all([p.GOOD for p in self.PLAYERS]):
             self._stage += 1
             self.NewRound()
         else:
             self.Action()
+        
+        input('Press ENTER to continue...\n')
 
     def Summary(self):
         self.POOL.Give(self.WINNER)
         if self.TABLE:
             print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池：${self.POOL}')
         else:
-            print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池：${self.POOL}')
+            print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 ${self.POOL}')
 
         # losers say bye
         for p in self.PLAYERS:

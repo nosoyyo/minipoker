@@ -5,7 +5,7 @@ from thpoker.core import Hand, Combo
 from simple_term_menu import TerminalMenu
 
 from corpus import CORPUS
-from exceptions import GameAlreadyFullError, OverBetError, PlayerIndexError, BuyInError
+from exceptions import OverBetError, InvalidBetError
 
 
 class Player():
@@ -22,7 +22,6 @@ class Player():
         self.BB = False
         self._raw_hand = [] #:List:
         self.CASH = 0
-        self.COMBO = None
         self.BUYINTIMES = 0
         self.LASTBET = 0
         self.ONTABLE = False
@@ -31,7 +30,7 @@ class Player():
     def __repr__(self) -> str:
         info = f'<{self.NAME} 总盈亏${self.WEALTH} 筹码${self.CASH}>'
         if self.INDEX:
-            info = f'{self.INDEX}: {info}'
+            info = f'[{self.INDEX}] {info}'
         return info
 
     @property
@@ -40,10 +39,10 @@ class Player():
     
     @property
     def INDEX(self) -> int:
+        #TODO: not in PLAYERS but in POSITIONS
         try:
-            for i in range(len(self.game.PLAYERS)):
-                if self.NAME == self.game.PLAYERS[i].NAME:
-                    return i
+            players = [v for v in self.game.POSITIONS.__dict__.values()]
+            return players.index(self)
         except:
             return None
 
@@ -58,7 +57,9 @@ class Player():
             pass
 
     def Bet(self, bet):
-        if self.CASH < bet:
+        if bet <= 0:
+            raise InvalidBetError(f'must bet something! not ${bet}')
+        elif self.CASH < bet:
             self.logger.fatal(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
             raise OverBetError()
         else:
@@ -66,7 +67,7 @@ class Player():
             self.CASH -= bet
             self.game.POOL.Add(self, bet)
             self.game.LASTACTION = {self:bet}
-            self.LASTBET = bet
+            self.LASTBET += bet
         return self.game.POOL
 
     def Talk(self, command, p=None):
@@ -102,9 +103,9 @@ class Player():
             word = command
         print(f'{self.NAME}：{word}\n')
 
-    def Combo(self) -> Combo:
-        self.COMBO = Combo(hand=self.HAND, table=self.game.TABLE)
-        return self.COMBO
+    @property
+    def COMBO(self) -> Combo:
+        return Combo(hand=self.HAND, table=self.game.TABLE)
  
     def PowerCheck(self):
         # TODO
@@ -143,6 +144,7 @@ class Player():
                 self.logger.info(f'{self.NAME}无筹码，跳过此轮')
             else:
                 self.logger.info(f'{self.NAME}正在决策...')
+                print(f'当前底池: {self.game.POOL}')
                 s = random.random() + 1
                 time.sleep(s)
                 self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
@@ -150,7 +152,7 @@ class Player():
                 power = self.PowerCheck() #TODO
                 self.logger.debug(f'Player.PowerCheck() => {power}')
 
-                if self.LASTBET == self.game.LASTBET:
+                if self.LASTBET == self.game.POOL.MAX:
                     pass
                 else:
                     if self.CASH <= self.game.LASTBET:
@@ -185,17 +187,7 @@ class Player():
                         self.Talk('allin')
             input('Press ENTER to continue...\n')
         else:
-            if self.game.OVER:
-                if not self.CASH:
-                    options = ['BUY IN', 'GAME OVER']
-                    menu = TerminalMenu(options)
-                    decision = menu.show()
-                    decision = options[decision]
-                    if decision == 'BUY IN':
-                        self.BuyIn()
-                    else:
-                        self.game.Exit()
-            elif self.ONTABLE:
+            if self.ONTABLE:
                 self.logger.info(f'game.LASTACTION {self.game.LASTACTION}')
                 print(f'当前底池: {self.game.POOL}')
                 print(f'你的手牌：{self.HAND}')
@@ -246,34 +238,38 @@ class Player():
     
     def Call(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Call')
-        bet = self.game.LASTBET - self.LASTBET
+        bet = self.game.POOL.MAX - self.LASTBET
         self.logger.debug(f'{self.NAME}准备跟注 ${bet}')
         self.Bet(bet)
         self.GOOD = True
 
+    def Good(self):
+        self.GOOD = True
+        for p in self.game.PLAYERS:
+            #if p is not self:
+            if p is not self and p.LASTBET != self.game.POOL.MAX:
+                p.GOOD = False
+
     def Raise(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Raise')
-        q = int(random.random()* 4) + 1
-        bet  = self.game.SB * q + self.game.LASTBET - self.LASTBET
+        # q should mostly be 2~5
+        q = int(random.random()*3) + int(random.random()*2)+1
+        bet  = q * self.game.LASTBET - self.LASTBET
         if bet >= self.CASH:
             self.Talk('allin')
         else:
             self.game.LASTBET = bet
             self.logger.debug(f'{self.NAME}准备加注 ${bet}')
             self.Bet(bet)
-            self.GOOD = True
-        # this makes other ONTABLE Players not GOOD
-        for p in self.game.PLAYERS:
-            if p is not self:
-                p.GOOD = False
+            self.Good()
 
     def AllIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] AllIn')
         bet = self.CASH
+        self.game.LASTBET = bet
         self.logger.debug(f'{self.NAME}准备全下 ${bet}')
         self.Bet(bet)
-        self.game.LASTBET = bet
-        self.GOOD = True
+        self.Good()
 
     def Fold(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Fold')
@@ -288,12 +284,23 @@ class Player():
         self.CASH += self.game.BUYIN
         self.ONTABLE = True
         self.BUYINTIMES += 1
-        self.logger.info(f'{self.NAME} 买入 ${self.game.BUYIN}，上桌')
+        self.logger.info(f'{self.NAME}买入 ${self.game.BUYIN} 筹码，上桌')
         self.Talk('buyin')
     
     def Bye(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Bye')
-        self.game.POSITIONS.Remove(self)
-        self.logger.info(f'{self.NAME} 下桌了')
-        self.game.WORLD.add(self)
-        self.Talk('bye')
+        if self.IS_AI:
+            self.game.POSITIONS.Remove(self)
+            self.logger.info(f'{self.NAME}下桌了')
+            self.game.WORLD.Add(self)
+            self.Talk('bye')
+        else:
+            print(f'筹码输光了，买入吗？')
+            options = ['对', '不了，到这吧']
+            menu = TerminalMenu(options)
+            decision = menu.show()
+            decision = options[decision]
+            if decision == '对':
+                self.BuyIn()
+            else:
+                self.game.Exit()

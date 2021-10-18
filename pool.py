@@ -28,6 +28,13 @@ class Pool:
             flag = True
         return flag
 
+    @property    
+    def MAX(self):
+        m = []
+        for pl in self.pools:
+            m.append(max(pl))
+        return max(m)
+
     def Give(self, p, index=0) -> None:
         p.CASH += sum(self.pools[index])
         # here we do no clean, will do Pool.__init__ later in NewGame()

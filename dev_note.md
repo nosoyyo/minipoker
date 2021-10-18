@@ -1,18 +1,20 @@
 # HIGHEST PRIORITY
-#TODO rewrite game logic
-#ISSUE match every player's bet within one round
+## #TODO rewrite game logic
+
+#ISSUE should call Summary() before Flop when there's only 1P left
+#ISSUE offtable player need to get on when NewGame()
+#DONE match every player's bet within one round
 #DONE add Positions.Remove
 #DONE adjust Player.Bye
-#TODO offtable player need to get on when NewGame()
 
 # ISSUE
-#ISSUE repeated Player fucking everywhere
-#ISSUE all in guy still can all in
-#ISSUE every one can call $0 @game.Turn
-#ISSUE wrong game.NUMOFGAMES
-#ISSUE wrong SB/BB order after NewGame(), should add TABLEPOSITION
+#FIXED repeated Player fucking everywhere
+#FIXED all in guy still can all in
+#FIXED every one can call $0 @game.Turn
+#FIXED wrong game.NUMOFGAMES
+#FIXED wrong SB/BB order after NewGame(), should add TABLEPOSITION
 #FIXED game.PLAYERS.hand not refreshed after NextGame()
-#ISSUE missing action in River stage
+#FIXED missing action in River stage
 #FIXED the 1st player of flop round should be able to check
 
 # TODO
