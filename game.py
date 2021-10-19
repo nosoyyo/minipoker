@@ -4,6 +4,7 @@
 import sys
 import random
 import logging
+from rich import print
 from typing import List
 from thpoker.core import Table
 
@@ -59,10 +60,11 @@ class Game():
                 player.ONTABLE = True
             # rotate, redistribute SB/BB
             self.POSITIONS.Rotate()
-            self.logger.info(f'{self.POSITIONS.SB} 小盲')
-            self.logger.info(f'{self.POSITIONS.BB} 大盲')
             if self.POSITIONS.AVAILABLE:
                 self.WORLD.pop().BuyIn()
+
+            self.logger.info(f'{self.POSITIONS.SB} 小盲')
+            self.logger.info(f'{self.POSITIONS.BB} 大盲')
 
         self.LASTBET = self.BB
         self.WINNER = None
@@ -90,11 +92,6 @@ class Game():
         self.NewRound()
 
     @property
-    def Pool(self):
-        #TODO
-        return sum(self.POOL.pools[0])
-
-    @property
     def TABLE(self):
         string = '/'.join(self._raw_table)
         return Table(string)
@@ -120,22 +117,32 @@ class Game():
 
     def Deal(self, p, method='decisive'):
         if method == 'decisive':
-            p._raw_hand = random.sample(self.RAWCARDS, 2)
+            p._raw_hand.append(self.RAWCARDS.pop())
+            p._raw_hand.append(self.RAWCARDS.pop())
             self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
         elif method == 'dynamic':
             pass
  
     def NewRound(self):
         self.logger.info(f'\n第 {self.NUMOFGAMES} 局 {self.STAGE}\n')
-        left = '、'.join([p.NAME for p in self.PLAYERS])
-        self.logger.info(f'当前玩家 {left}')
+        ontable = '、'.join([p.NAME for p in self.PLAYERS])
+        self.logger.info(f'当前玩家 {ontable}')
 
+        # re-init stuff if necessary
         self.LASTACTION = {}
+        for p in self.PLAYERS:
+            if not p.ALLIN:
+                p.GOOD = False
+                p.LASTACTION = None
 
         if self._stage == 0:
             self.Action()
         elif self._stage == 2:
-            self._raw_table = random.sample(self.RAWCARDS, 3)
+            # method == decisive
+            self._raw_table.append(self.RAWCARDS.pop())
+            self._raw_table.append(self.RAWCARDS.pop())
+            self._raw_table.append(self.RAWCARDS.pop())
+
             self.Action()
         elif 2 < self._stage < 5:
             self._raw_table.append(self.RAWCARDS.pop())
@@ -147,47 +154,41 @@ class Game():
         input('Press ENTER to continue...\n')
 
     def Action(self):
-        self.logger.info(f'\n当前桌面 {self.TABLE}\n')
-        self.logger.info(f'当前底池 {self.POOL}')
+        if self.TABLE:
+            self.logger.info(f'\n当前桌面 {self.TABLE}\n')
+        self.logger.debug(f'本轮下注 {self.POOL.CURRENT}')
 
         if self._stage == 0:
             for p in self.PLAYERS:
                 p.LASTBET = 0
                 if p.SB:
                     p.Bet(self.SB)
-                    p.Good()
+                    p.LASTACTION = '小盲'
                 elif p.BB:
                     p.Bet(self.BB)
-                    p.Good()
+                    p.LASTACTION = '大盲'
                     self._stage += 1
                 else:
                     p.Decide()
-                self.logger.info(f'当前底池 {self.POOL}')
-                print(f'-----------------')
+
+                over = self.CheckState()
+                if over:
+                    for p in self.PLAYERS:
+                        p.ShowHand()
+                    self.Summary()
+
+                self.POOL.ShowCurrent()
         else:
-            over = self.CheckState()
-            if over:
-                for p in self.PLAYERS:
-                    p.ShowHand()
-                self.Summary()
-            else:
-                for p in self.PLAYERS:
-                    self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
+            for p in self.PLAYERS:
+                self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
 
-                    # SB dont forget SB
-                    if p.SB and not self.BLIND:
-                        p.Bet(self.SB)
-                        self.logger.info(f'[SB] {p.NAME} 补上小盲 ${self.SB}')
-                        self.BLIND = True
-                        p.Decide()
-                    elif p.POSITION == 'BB':
-                        p.Decide()
-
-                    # everyone must match their bets
-                    if not p.GOOD:
-                        p.Decide()
-                self.logger.info(f'当前底池 {self.POOL}')
-                print(f'-----------------')
+                if not p.GOOD:
+                    p.Decide()
+                    over = self.CheckState()
+                    if over:
+                        for p in self.PLAYERS:
+                            p.ShowHand()
+                        self.Summary()
 
         #check if all Players are GOOD or if game over
         self.logger.debug(f'all Players.GOOD? {[p.GOOD for p in self.PLAYERS]}')
@@ -196,8 +197,13 @@ class Game():
             if over:
                 self.Summary()
             else:
+                # accounting
+                self.POOL.Account()
+                self.logger.info('game.POOL.Account() =>')
+                print(self.POOL)
+                self.logger.info(self.POOL.Show())
+                input('\n\nPress ENTER to continue...\n')
                 self._stage += 1
-                input('Press ENTER to continue...\n')
                 self.NewRound()
         else:
             self.Action()
@@ -205,8 +211,8 @@ class Game():
         #input('Press ENTER to continue...\n')
 
     def Summary(self):
-        self.POOL.Give(self.WINNER)
-        if self.TABLE:
+        self.POOL.Account()
+        if self._stage > 1:
             print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}')
         else:
             print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}')
@@ -227,7 +233,6 @@ class Game():
         if len(self.PLAYERS) == 1:
             if len(self.POOL) == 1:
                 self.WINNER = self.PLAYERS[0]
-                self.POOL.Give(self.WINNER)
                 self.OVER = True
             else:
                 #TODO side-pool situations
@@ -248,7 +253,4 @@ class Game():
         return self.OVER
                 
     def Exit(self):
-        try:
-            sys.exit(0)
-        except:
-            print('bye👋🏻')
+        sys.exit('bye👋🏻')

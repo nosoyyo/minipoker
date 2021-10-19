@@ -1,2 +1,3 @@
+rich
 thpoker
 simple-term-menu

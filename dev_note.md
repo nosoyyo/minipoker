@@ -1,6 +1,11 @@
 # HIGHEST PRIORITY
 
-#ISSUE repeated cards in `Player.HAND`
+#ISSUE a total mess of `game.PLAYERS` or `game.POSITIONS` after 2nd `NewGame`
+#ISSUE repeated cards in `Player.HAND` and `game.TABLE`
+#ISSUE when two `Player` left @`Flop`, they all folded and 
+#ISSUE `Player` need to `Decide` in each round if they could
+#DONE put `POOL.Account` somewhere between `NewRound` or `Action`
+#FIXED repeated cards in `Player.HAND` and `game.TABLE`
 
 ## rewrite game logic
 
@@ -54,6 +59,7 @@
 
 # IMPROVEMENT
 
+#TODO emoji faces beside `game.POOL.Show`, let's call it `MOOD`😎
 #TODO too many raise and counter raise @`Preflop`
 #TODO reactions to one's action
 #DONE improve Pool: seperate every bet

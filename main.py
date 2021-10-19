@@ -1,5 +1,7 @@
 import random
 import logging
+from rich.traceback import install
+install(show_locals=True)
 
 from game import Game
 

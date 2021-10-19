@@ -1,14 +1,18 @@
 import logging
+from rich.table import Table
+from rich.console import Console
 
 from exceptions import InvalidBetError
 
 
 logger = logging.getLogger('game.Pool.Add')
+console = Console()
 
 
 class Pool():
 
     def __init__(self, game) -> None:
+        self.game = game
         players = [i for i in game.POSITIONS.__dict__.values() if i]
         pool = {}
         for p in players:
@@ -16,22 +20,43 @@ class Pool():
         self.pools = [pool]
 
         self.CURRENT = {}
+        for p in players:
+            self.CURRENT.update({ p : 0 })
 
     def __repr__(self):
-        repr = 'self.pools.__str__()'
-        if self.CURRENT:
-            repr = f'本轮下注 {self.CURRENT} {repr}'
-        return repr
+        return f'${self.SUM}'
+
+    def __len__(self) -> int:
+        return len(self.pools)
 
     def Add(self, p, bet):
         '''
         pools[0] is always the main pool, mzmkb;
         '''
-        if bet <= 0 or type(bet) is not int:
+        if bet < self.game.SB or type(bet) is not int:
             raise InvalidBetError(f'cannot bet ${bet}!')
-        if p in self.CURRENT.keys():
-            bet += self.CURRENT[p]
-        self.CURRENT.update({p:bet})
+        else:
+            if p in self.CURRENT.keys():
+                bet += self.CURRENT[p]
+                self.CURRENT.update({p:bet})
+                self.__dict__[p] = bet
+
+    @property
+    def CURRENTMAX(self):
+        sequence = [v for v in self.CURRENT.values() if v] or [0]
+        return max(sequence)
+
+    @property
+    def CURRENTANY(self):
+        return any([v for v in self.CURRENT.values() if v])
+    
+    @property
+    def CURRENTSUM(self):
+        return sum([v for v in self.CURRENT.values() if v])
+
+    @property
+    def SUM(self):
+        return self.CURRENTSUM + sum(self.pools[0].values())
 
     def Account(self):
         '''
@@ -41,43 +66,43 @@ class Pool():
 
         side-pool: when an all-in player can't match a previously bet
         '''
-        self.pools[0].update(self.CURRENT)
+        for k in self.CURRENT.keys():
+            if self.CURRENT[k]:
+                v = self.pools[0][k] + self.CURRENT[k]
+                self.pools[0][k] = v
+                # dont forget clear `CURRENT`
+                self.CURRENT[k] = 0
 
-class _Pool:
+        if self.game.WINNER:
+            self.game.WINNER.CASH += self.SUM
 
-    def __init__(self, n_players) -> None:
-        self.pools = [[0]]
-        self.pools = [[i for i in self.pools[0] for j in range(n_players)]]
-    
-    def __len__(self) -> int:
-        return len(self.pools)
-    
-    def __repr__(self) -> str:
-        #TODO
-        s = sum(self.pools[0])
-        return f'${s}: {self.pools}'
+    def Show(self):
+        t = f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n'
+        if self.game.TABLE:
+            t = f't{self.game.TABLE}'
+        table = Table(title=t)
+        table.add_column("玩家", justify="right", style="cyan", no_wrap=True)
+        table.add_column("总盈亏", style="blue")
+        table.add_column("筹码", style="magenta")
+        table.add_column("本局下注", justify="right", style="green")
+        table.add_column("行动", justify="middle", style="white")
 
-    def Add(self, p, bet: int, index=0) -> None:
-        self.pools[index][p.INDEX] += bet
-        logger.debug(self.pools)
+        for p in self.pools[0]:
+            table.add_row(p.NAME, str(p.WEALTH), str(p.CASH), str(self.pools[0][p]), p.LASTACTION)
+        console.print(table)
 
-    def EVEN(self, index=0):
-        flag = False
-        if len(set(self.pools[index])) == 1:
-            flag = True
-        return flag
+    def ShowCurrent(self):
+        t = f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n'
+        if self.game.TABLE:
+            t = f't{self.game.TABLE}'
+        table = Table(title=f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n')
+        table.add_column("玩家", justify="right", style="cyan", no_wrap=True)
+        table.add_column("筹码", style="magenta")
+        table.add_column("本轮下注", justify="right", style="green")
+        table.add_column("行动", justify="middle", style="white")
 
-    @property    
-    def MAX(self):
-        m = []
-        for pl in self.pools:
-            m.append(max(pl))
-        return max(m)
+        c = self.CURRENT
+        for p in c:
+            table.add_row(p.NAME, str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
+        console.print(table)
 
-    def Give(self, p, index=0) -> None:
-        p.CASH += sum(self.pools[index])
-        # here we do no clean, will do Pool.__init__ later in NewGame()
-
-    def Side(self, bet: int, index) -> None:
-        #TODO
-        pass
