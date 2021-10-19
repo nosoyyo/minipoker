@@ -1,8 +1,10 @@
 # HIGHEST PRIORITY
 
+#ISSUE repeated cards in `Player.HAND`
+
 ## rewrite game logic
 
-#ISSUE infinite loop @Preflop when bets are even`
+#FIXED infinite loop @Preflop when bets are even`
 #FIXED should call `Summary()` before `Flop` when there's only 1P left
 #FIXED offtable player need to get on when `NewGame()`
 #DONE add `Positions.Remove`

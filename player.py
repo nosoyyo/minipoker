@@ -60,8 +60,8 @@ class Player():
             pass
 
     def Bet(self, bet):
-        if bet <= 0:
-            raise InvalidBetError(f'must bet something! not ${bet}')
+        if bet <= 0 or type(bet) is not int:
+            raise InvalidBetError(f'cannot bet ${bet}!')
         elif self.CASH < bet:
             self.logger.fatal(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
             raise OverBetError()
@@ -136,7 +136,7 @@ class Player():
     
     def ChooseOpponent(self):
         opponent = random.choice(self.game.PLAYERS)
-        if opponent.NAME == self.NAME:
+        if opponent is self:
             opponent = self.ChooseOpponent()
         return opponent
 
@@ -145,7 +145,7 @@ class Player():
             self.logger.debug(f'{self} 行动')
             self.logger.debug(f'{self.NAME}手牌：{self.HAND}')
             if not self.CASH:
-                self.logger.info(f'{self.NAME}无筹码，跳过此轮')
+                self.logger.debug(f'{self.NAME}无筹码，跳过此轮')
             else:
                 self.logger.info(f'{self.NAME}正在决策...')
                 self.logger.info(f'当前底池: {self.game.POOL}')
@@ -219,7 +219,7 @@ class Player():
     def Options(self):
         # options = ['allin','call','check','fold','raise',]
         options = []
-        if self.game.LASTBET >= self.CASH:
+        if self.game.POOL.MAX >= self.CASH:
             options = ['allin', 'fold']
         else:
             if self.game._stage == 0:
@@ -286,6 +286,10 @@ class Player():
         print(f'{self.NAME}离开牌桌，还剩{left}')
         #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
 
+    def ShowHand(self):
+        self.logger.debug(f'[Player] {self.NAME} [action] ShowHand')
+        self.logger.info(f'{self} 手牌 {self.HAND}')
+
     def BuyIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] BuyIn')
         self.game.POSITIONS.Add(self)
@@ -296,12 +300,12 @@ class Player():
         self.Talk('buyin')
     
     def Bye(self):
-        self.logger.info(f'[Player] {self.NAME} [action] Bye')
+        self.logger.debug(f'[Player] {self.NAME} [action] Bye')
         self.ONTABLE = False
-        self.game.POSITIONS.Remove(self) #??
+        self.game.POSITIONS.Remove(self)
         self.logger.info(f'{self.NAME}下桌了')
-        self.logger.info(f'self.game.POSITIONS {self.game.POSITIONS}')
-        self.logger.info(f'self.game.PLAYERS {self.game.PLAYERS}')
+        self.logger.debug(f'self.game.POSITIONS {self.game.POSITIONS}')
+        self.logger.debug(f'self.game.PLAYERS {self.game.PLAYERS}')
 
         if self.IS_AI:
             self.game.WORLD.Add(self)

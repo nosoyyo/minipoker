@@ -75,7 +75,7 @@ class Game():
         self.RAWCARDS = self.Shuffle()
 
         # init or re-init POOL
-        self.POOL = Pool(len(self.PLAYERS))
+        self.POOL = Pool(self)
 
         ''' 
         0 - Init
@@ -162,10 +162,13 @@ class Game():
                     self._stage += 1
                 else:
                     p.Decide()
+                self.logger.info(f'当前底池 {self.POOL}')
                 print(f'-----------------')
         else:
             over = self.CheckState()
             if over:
+                for p in self.PLAYERS:
+                    p.ShowHand()
                 self.Summary()
             else:
                 for p in self.PLAYERS:
@@ -177,16 +180,17 @@ class Game():
                         self.logger.info(f'[SB] {p.NAME} 补上小盲 ${self.SB}')
                         self.BLIND = True
                         p.Decide()
-                    else:
+                    elif p.POSITION == 'BB':
                         p.Decide()
 
                     # everyone must match their bets
                     if not p.GOOD:
                         p.Decide()
+                self.logger.info(f'当前底池 {self.POOL}')
                 print(f'-----------------')
 
         #check if all Players are GOOD or if game over
-        self.logger.info(f'all Players.GOOD? {[p.GOOD for p in self.PLAYERS]}')
+        self.logger.debug(f'all Players.GOOD? {[p.GOOD for p in self.PLAYERS]}')
         if all([p.GOOD for p in self.PLAYERS]):
             over = self.CheckState()
             if over:
@@ -213,7 +217,7 @@ class Game():
             if not p.CASH:
                 p.Bye()
 
-        input('Press ENTER to continue...\n')
+        #input('Press ENTER to continue...\n')
         self.NewGame()
 
     def CheckState(self):
