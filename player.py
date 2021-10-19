@@ -71,6 +71,7 @@ class Player():
             self.game.POOL.Add(self, bet)
             self.game.LASTACTION = {self:bet}
             self.LASTBET += bet
+            self.Good()
         return self.game.POOL
 
     def Talk(self, command, p=None):
@@ -147,7 +148,7 @@ class Player():
                 self.logger.info(f'{self.NAME}无筹码，跳过此轮')
             else:
                 self.logger.info(f'{self.NAME}正在决策...')
-                print(f'当前底池: {self.game.POOL}')
+                self.logger.info(f'当前底池: {self.game.POOL}')
                 s = random.random() + 1
                 time.sleep(s)
                 self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
@@ -235,6 +236,13 @@ class Player():
         self.logger.debug(f'options: {options}')
         return options
 
+    def Good(self):
+        self.GOOD = True
+        for p in self.game.PLAYERS:
+            #if p is not self:
+            if p is not self and p.LASTBET != self.game.POOL.MAX and not p.ALLIN:
+                p.GOOD = False
+
     def Check(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Check')
         self.game.LASTBET = 0
@@ -244,14 +252,6 @@ class Player():
         bet = self.game.POOL.MAX - self.LASTBET
         self.logger.debug(f'{self.NAME}准备跟注 ${bet}')
         self.Bet(bet)
-        self.GOOD = True
-
-    def Good(self):
-        self.GOOD = True
-        for p in self.game.PLAYERS:
-            #if p is not self:
-            if p is not self and p.LASTBET != self.game.POOL.MAX:
-                p.GOOD = False
 
     def Raise(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Raise')
@@ -264,7 +264,6 @@ class Player():
             self.game.LASTBET = bet
             self.logger.debug(f'{self.NAME}准备加注 ${bet}')
             self.Bet(bet)
-            self.Good()
 
     def AllIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] AllIn')
@@ -272,7 +271,13 @@ class Player():
         self.game.LASTBET = bet
         self.logger.debug(f'{self.NAME}准备全下 ${bet}')
         self.Bet(bet)
-        self.Good()
+    
+    @property
+    def ALLIN(self):
+        flag = False
+        if self.ONTABLE and not self.CASH:
+            flag = True
+        return flag
 
     def Fold(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Fold')
@@ -291,9 +296,12 @@ class Player():
         self.Talk('buyin')
     
     def Bye(self):
-        self.logger.debug(f'[Player] {self.NAME} [action] Bye')
-        self.game.POSITIONS.Remove(self)
+        self.logger.info(f'[Player] {self.NAME} [action] Bye')
+        self.ONTABLE = False
+        self.game.POSITIONS.Remove(self) #??
         self.logger.info(f'{self.NAME}下桌了')
+        self.logger.info(f'self.game.POSITIONS {self.game.POSITIONS}')
+        self.logger.info(f'self.game.PLAYERS {self.game.PLAYERS}')
 
         if self.IS_AI:
             self.game.WORLD.Add(self)

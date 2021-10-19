@@ -126,7 +126,10 @@ class Game():
             pass
  
     def NewRound(self):
-        print(f'\n第 {self.NUMOFGAMES} 局 {self.STAGE}\n')
+        self.logger.info(f'\n第 {self.NUMOFGAMES} 局 {self.STAGE}\n')
+        left = '、'.join([p.NAME for p in self.PLAYERS])
+        self.logger.info(f'当前玩家 {left}')
+
         self.LASTACTION = {}
 
         if self._stage == 0:
@@ -134,25 +137,28 @@ class Game():
         elif self._stage == 2:
             self._raw_table = random.sample(self.RAWCARDS, 3)
             self.Action()
-        elif self._stage == 5:
-            self.Summary()
-        else:
+        elif 2 < self._stage < 5:
             self._raw_table.append(self.RAWCARDS.pop())
             self.Action()
+        elif self._stage == 5:
+            self.Summary()
 
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
         input('Press ENTER to continue...\n')
 
     def Action(self):
-        print(f'\n当前桌面: {self.TABLE}\n')
+        self.logger.info(f'\n当前桌面 {self.TABLE}\n')
+        self.logger.info(f'当前底池 {self.POOL}')
 
         if self._stage == 0:
             for p in self.PLAYERS:
                 p.LASTBET = 0
                 if p.SB:
                     p.Bet(self.SB)
+                    p.Good()
                 elif p.BB:
                     p.Bet(self.BB)
+                    p.Good()
                     self._stage += 1
                 else:
                     p.Decide()
@@ -170,6 +176,9 @@ class Game():
                         p.Bet(self.SB)
                         self.logger.info(f'[SB] {p.NAME} 补上小盲 ${self.SB}')
                         self.BLIND = True
+                        p.Decide()
+                    else:
+                        p.Decide()
 
                     # everyone must match their bets
                     if not p.GOOD:
@@ -177,25 +186,27 @@ class Game():
                 print(f'-----------------')
 
         #check if all Players are GOOD or if game over
-        self.logger.debug(f'all Players.GOOD? {[p.GOOD for p in self.PLAYERS]}')
+        self.logger.info(f'all Players.GOOD? {[p.GOOD for p in self.PLAYERS]}')
         if all([p.GOOD for p in self.PLAYERS]):
             over = self.CheckState()
             if over:
                 self.Summary()
             else:
                 self._stage += 1
+                input('Press ENTER to continue...\n')
                 self.NewRound()
         else:
             self.Action()
         
-        input('Press ENTER to continue...\n')
+        #input('Press ENTER to continue...\n')
 
     def Summary(self):
         self.POOL.Give(self.WINNER)
         if self.TABLE:
-            print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池：${self.POOL}')
+            print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}')
         else:
-            print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 ${self.POOL}')
+            print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}')
+        input('Press ENTER to continue...\n')
 
         # losers say bye
         for p in self.PLAYERS:

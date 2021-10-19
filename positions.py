@@ -60,7 +60,8 @@ class Positions():
         #clear Player.SB etc.
         for k in self.__dict__.keys():
             p = self.__dict__[k]
-            p.__dict__[k] = False
+            if p:
+                p.__dict__[k] = False
 
         players = [i for i in self.__dict__.values() if i]
         players.append(players.pop(0))
@@ -71,7 +72,8 @@ class Positions():
         #set Player.SB etc.
         for k in self.__dict__.keys():
             p = self.__dict__[k]
-            p.__dict__[k] = True
+            if p:
+                p.__dict__[k] = True
         
         logger.debug(f'POSITIONS after Rotate {self}')
 

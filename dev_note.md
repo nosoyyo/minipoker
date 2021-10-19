@@ -1,10 +1,16 @@
 # HIGHEST PRIORITY
-## #TODO rewrite game logic
-#ISSUE infinite loop @Preflop when bets are even
+
+## rewrite game logic
+
+#ISSUE infinite loop @Preflop when bets are even`
 #FIXED should call `Summary()` before `Flop` when there's only 1P left
 #FIXED offtable player need to get on when `NewGame()`
 #DONE add `Positions.Remove`
 #DONE adjust `Player.Bye`
+
+## `Pool`
+#TODO change `Pool` from list to dict, match `Player` and his `LASTBET
+#TODO `Player.Fold` holds a status in `POOL.pools[]`, not `0`
 
 ## accounting
 #ISSUE match every player's bet within one round
@@ -46,6 +52,7 @@
 
 # IMPROVEMENT
 
+#TODO too many raise and counter raise @`Preflop`
 #TODO reactions to one's action
 #DONE improve Pool: seperate every bet
 #DONE [deprecated]game.SBPLAYER and game.BBPLAYER
