@@ -1,18 +1,26 @@
 import random
 import logging
+from rich.logging import RichHandler
 from rich.traceback import install
 install(show_locals=True)
 
 from game import Game
 
+logging.basicConfig(
+    level="DEBUG",
+    format="'[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s'",
+    datefmt="[%X]",
+    handlers=[RichHandler(rich_tracebacks=True)]
+)
 
+
+#FORMAT = logging.Formatter('[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s')
 logger = logging.getLogger('main')
-logger.setLevel(logging.INFO)
-formatter = logging.Formatter('[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s')
 sh = logging.StreamHandler()
 fh = logging.FileHandler('main.log')
-sh.setFormatter(formatter)
-fh.setFormatter(formatter)
+rh = RichHandler()
+#sh.setFormatter(FORMAT)
+#fh.setFormatter(FORMAT)
 logger.addHandler(sh)
 logger.addHandler(fh)
 

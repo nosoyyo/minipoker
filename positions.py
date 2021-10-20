@@ -40,7 +40,10 @@ class Positions():
     def Remove(self, p) -> bool:
         flag = False
         try:
-            self.__dict__[p.POSITION] = None
+            # self.__dict__[p.POSITION] = None
+            for i in self.__dict__.items(): 
+                if i[1] is p: 
+                    self.__dict__[i[0]] = None 
         except:
             flag = False
         else:

@@ -106,3 +106,5 @@ class Pool():
             table.add_row(p.NAME, str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
         console.print(table)
 
+    def SidePool(self, p, bet) -> None:
+        pass

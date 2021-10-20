@@ -7,20 +7,25 @@ import logging
 from rich import print
 from typing import List
 from thpoker.core import Table
+from rich.console import Console
+from rich.table import Table as RichTable
 
 from pool import Pool
 from exceptions import *
 from world import World
 from player import Player
-from corpus import CORPUS
 from utils import SortCombo
 from positions import Positions
 
 
 class Game():
+
+    LASTBET = None
+    LASTACTION = {}
     
     def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.game')
+        self.console = Console()
         self.WORLD = World(self)
         self.POSITIONS = Positions(n_AI)
         self.BUYIN = buyin
@@ -29,6 +34,7 @@ class Game():
         self.RAWCARDS = self.Shuffle()
         self.SB = SB
         self.BB = SB*2
+        
 
         self.PLAYER = Player(self, is_AI=False)
     
@@ -47,14 +53,12 @@ class Game():
         # get on the table dudes
         if self.NUMOFGAMES == 1:
             for i in range(len(self.POSITIONS)-1):
-                #self.logger.debug(f'game.NewGame: i {i}')
                 p = self.WORLD.pop()
-                #self.logger.debug(f'self.WORLD.pop() => {p}')
                 p.BuyIn()
-                #self.logger.debug(f'self.POSITIONS {self.POSITIONS}')
             # human player get in here
             self.PLAYER.BuyIn()
         else:
+            self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
             ps = [i for i in self.POSITIONS.__dict__.values() if i]
             for player in ps:
                 player.ONTABLE = True
@@ -123,44 +127,56 @@ class Game():
         elif method == 'dynamic':
             pass
  
-    def NewRound(self):
+    def ShowTable(self):
+        if self.TABLE:
+            GRID = RichTable.grid(expand=True) 
+            GRID.add_column() 
+            GRID.add_column(justify="centre") 
+            GRID.add_row(f'当前桌面 [bold magenta]{self.TABLE}')
+            self.console.print(GRID)
+
+    def NewRound(self):       
+        
         self.logger.info(f'\n第 {self.NUMOFGAMES} 局 {self.STAGE}\n')
+        self.ShowTable()
         ontable = '、'.join([p.NAME for p in self.PLAYERS])
         self.logger.info(f'当前玩家 {ontable}')
 
         # re-init stuff if necessary
+        self.LASTBET = 0
         self.LASTACTION = {}
         for p in self.PLAYERS:
             if not p.ALLIN:
                 p.GOOD = False
                 p.LASTACTION = None
+                p.LASTBET = 0
 
         if self._stage == 0:
-            self.Action()
+            self.Actions()
         elif self._stage == 2:
             # method == decisive
             self._raw_table.append(self.RAWCARDS.pop())
             self._raw_table.append(self.RAWCARDS.pop())
             self._raw_table.append(self.RAWCARDS.pop())
 
-            self.Action()
+            self.Actions()
         elif 2 < self._stage < 5:
             self._raw_table.append(self.RAWCARDS.pop())
-            self.Action()
+            self.Actions()
         elif self._stage == 5:
             self.Summary()
 
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
         input('Press ENTER to continue...\n')
 
-    def Action(self):
+    def Actions(self):
         if self.TABLE:
             self.logger.info(f'\n当前桌面 {self.TABLE}\n')
         self.logger.debug(f'本轮下注 {self.POOL.CURRENT}')
 
         if self._stage == 0:
             for p in self.PLAYERS:
-                p.LASTBET = 0
+                # p.LASTBET = 0
                 if p.SB:
                     p.Bet(self.SB)
                     p.LASTACTION = '小盲'
@@ -169,7 +185,8 @@ class Game():
                     p.LASTACTION = '大盲'
                     self._stage += 1
                 else:
-                    p.Decide()
+                    if p.ONTABLE:
+                        p.Decide()
 
                 over = self.CheckState()
                 if over:
@@ -182,7 +199,7 @@ class Game():
             for p in self.PLAYERS:
                 self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
 
-                if not p.GOOD:
+                if not p.GOOD and p.ONTABLE:
                     p.Decide()
                     over = self.CheckState()
                     if over:
@@ -199,14 +216,14 @@ class Game():
             else:
                 # accounting
                 self.POOL.Account()
-                self.logger.info('game.POOL.Account() =>')
+                self.logger.debug('game.POOL.Account() =>')
                 print(self.POOL)
-                self.logger.info(self.POOL.Show())
+                self.logger.debug(self.POOL.Show())
                 input('\n\nPress ENTER to continue...\n')
                 self._stage += 1
                 self.NewRound()
         else:
-            self.Action()
+            self.Actions()
         
         #input('Press ENTER to continue...\n')
 
@@ -221,6 +238,10 @@ class Game():
         # losers say bye
         for p in self.PLAYERS:
             if not p.CASH:
+                self.logger.debug(f'{p} got no cash({p.CASH}) and get off table')
+                self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
+                self.logger.debug(f'game.PLAYERS {self.PLAYERS}')
+                self.logger.debug(f'p.ONTABLE {p.ONTABLE}')
                 p.Bye()
 
         #input('Press ENTER to continue...\n')

@@ -5,11 +5,12 @@ from rich import print
 from thpoker.core import Hand, Combo
 from simple_term_menu import TerminalMenu
 
-from corpus import CORPUS
+from corpus import Corpus
 from exceptions import OverBetError, InvalidBetError
 
 
 class Player():
+    
     def __init__(self, game, name=None, is_AI=True,) -> None:
         self.logger = logging.getLogger('main.player')
 
@@ -18,6 +19,9 @@ class Player():
         if not name:
             name = 'arslan'
         self.NAME = name
+
+        self.CORPUS = Corpus(self)
+
         self.IS_AI = is_AI
         self.POSITION = None
         self.SB = False
@@ -71,45 +75,62 @@ class Player():
             raise OverBetError()
         else:
             self.logger.info(f'{self} [Bet] {bet}')
+            # max valid bet
+            cashes = [p.CASH > bet for p in self.game.PLAYERS]
+            if any(cashes):
+                if bet > max(cashes):
+                    bet = max(cashes)
+                    self.logger.info(f'最多可下注 ${max(cashes)}')
+
             self.CASH -= bet
             self.game.POOL.Add(self, bet)
             self.game.LASTACTION = {self:bet}
+            self.game.LASTBET = bet
             self.LASTBET += bet
             self.Good()
         return self.game.POOL
 
     def Talk(self, command, p=None):
         time.sleep(0.3)
+
         if command == 'fold':
-            word = random.choice(CORPUS.FOLD)      
-            self.Fold()      
+            word = random.choice(self.CORPUS.FOLD)       
         elif command == 'check':
-            word = random.choice(CORPUS.CHECK)
-            self.Check()
+            word = random.choice(self.CORPUS.CHECK)
         elif command == 'call':
+            CORPUS = Corpus(self)
             word = random.choice(CORPUS.CALL)
-            self.Call()
         elif command == 'raise':
-            word = random.choice(CORPUS.RAISE)
+            word = random.choice(self.CORPUS.RAISE)
             oindex = self.INDEX + 1
             if oindex > len(self.game.PLAYERS) - 2:
                 oindex = 0
             opponent = self.game.PLAYERS[oindex]
             word = f'{word}，敢跟吗{opponent.NAME}'
-            self.Raise()
         elif command == 'allin':
-            word = random.choice(CORPUS.ALLIN)
-            self.AllIn()
+            word = random.choice(self.CORPUS.ALLIN)
         elif command == 'trash':
-            trash = random.choice(CORPUS.TRASHTALK)
+            trash = random.choice(self.CORPUS.TRASHTALK)
             word = f'{trash}{p.NAME}'
         elif command == 'buyin':
+            CORPUS = Corpus(self)
             word = random.choice(CORPUS.BUYIN)
         elif command == 'bye':
-            word = random.choice(CORPUS.BYE)
+            word = random.choice(self.CORPUS.BYE)
         else:
             word = command
         print(f'{self.NAME}：{word}\n')
+
+    def Comment(self, opponent, command):
+        #test
+        if command == 'allin' and self.Q > 0.6:
+            CORPUS = Corpus(self)
+            if len(self.game.TABLE.items):
+                comment = f'nb，四条{random.choice(self.game.TABLE.items)}呗{opponent.NAME}'
+            else:
+                comment = f'{random.choice(CORPUS.COMMENTALLIN)}{opponent.NAME}'
+            
+            print(f'{self.NAME}：{comment}')
 
     @property
     def COMBO(self) -> Combo:
@@ -144,6 +165,59 @@ class Player():
             opponent = self.ChooseOpponent()
         return opponent
 
+    def Action(self, power=0, command=None):
+        '''
+        most parameters fine-tuning work here
+        '''
+        if 0 < power < 18:
+            self.Fold()
+        elif 18 <= power < 46:
+            if not self.game.LASTBET:
+                self.Check()
+            else:
+                self.Fold()
+        elif 46 <= power < 66:
+            q = random.random()
+            if q > 0.6:
+                self.Call()
+            else:
+                if not self.game.LASTBET:
+                    self.Check()
+                else:
+                    self.Fold()
+        elif 66 <= power < 81:
+            q = random.random()
+            if q > 0.6:
+                self.Raise()
+            else:
+                if not self.game.LASTBET:
+                    self.Check()
+                else:
+                    self.Call()
+        elif 81 <= power < 98:
+            self.Raise()
+        elif power >= 98:
+            self.logger.debug(f'power >= 94 => {power}')
+            self.AllIn()
+        else:
+            if command == 'check':
+                self.Check()
+            elif command == 'call':
+                self.Call()
+            elif command == 'raise':
+                self.Raise()
+            elif command == 'allin':
+                self.AllIn()
+            elif command == 'fold':
+                self.Fold()
+
+    @property
+    def Q(self):
+        '''
+        #TODO different personalities return various Q types
+        '''
+        return random.random()
+
     def Decide(self):
         if self.IS_AI and self.ONTABLE:
             self.logger.debug(f'{self} 行动')
@@ -157,39 +231,38 @@ class Player():
                 power = self.PowerCheck() #TODO
                 self.logger.debug(f'Player.PowerCheck() => {power}')
 
-                if self.LASTBET == self.game.POOL.CURRENTMAX:
-                    pass
+                lb = self.LASTBET
+                cmx = self.game.POOL.CURRENTMAX
+                glb = self.game.LASTBET
+                self.logger.debug(f'Player.game.POOL.CURRENTMAX {cmx}')
+                self.logger.debug(f'Player.LASTBET {lb}')
+                self.logger.debug(f'game.LASTBET {glb}')
+                if not cmx:
+                    # here is when self is 1st player to act
+                    # options: check, raise, allin, fold(extremly rare)
+                    if 46 <= power < 81:
+                        # avoid `call` because nothing to call currently
+                        q = self.Q
+                        if q < 0.5:
+                            self.Check()
+                        else:
+                            self.Raise()
+                    #self.Action(power) #should be removed this line
                 else:
-                    if self.CASH <= self.game.POOL.CURRENTMAX:
+                    if self.LASTBET == self.game.POOL.CURRENTMAX:
+                        self.logger.debug(f'self.LASTBET == self.game.POOL.CURRENTMAX {True}')
+                        pass
+                    elif self.CASH <= self.game.POOL.CURRENTMAX:
+                        self.logger.debug(f'self.CASH <= self.game.POOL.CURRENTMAX {True}')
                         #TODO: q would be generated from personality
                         q = random.random()
-                        if q > 0.9:
-                            self.Talk('allin')
+                        if q > 0.99:
+                            # it's 1%, not a small rate!
+                            self.AllIn()
                         else:
-                            self.Talk('fold')
-                    elif power < 30:
-                        self.Talk('fold')
-                    elif 30 <= power < 60:
-                        if not self.game.LASTBET:
-                            self.Talk('check')
-                        else:
-                            self.Talk('fold')
-                    elif 60 <= power < 75:
-                        q = random.random()
-                        if not self.game.LASTBET:
-                            if q > 0.7:
-                                self.Talk('raise')
-                            else:
-                                self.Talk('check')
-                        else:
-                            if q > 0.7:
-                                self.Talk('raise')
-                            else:
-                                self.Talk('call')
-                    elif 75 <= power < 90:
-                        self.Talk('raise')
-                    elif power >= 90:
-                        self.Talk('allin')
+                            self.Fold()
+                    else:
+                        self.Action(power)
             s = random.random() + 0.4
             time.sleep(s)
             self.game.POOL.ShowCurrent()
@@ -217,7 +290,7 @@ class Player():
                     decision = menu.show()
                     decision = options[decision]
                     self.logger.debug(f'user input: {decision}')
-                    self.Talk(decision)
+                    self.Action(command=decision)
                 else:
                     print(f'你已经 all in 了，看戏吧')
                     input('Press ENTER to continue...\n')
@@ -235,7 +308,7 @@ class Player():
                     options = ['call','raise','allin','fold',]
             else:
                 if not self.game.LASTBET:
-                    options = ['call','check','raise','allin','fold',]
+                    options = ['check','raise','allin','fold',]
                 else:
                     options = ['call','raise','allin','fold',]
 
@@ -251,12 +324,14 @@ class Player():
 
     def Check(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Check')
+        self.Talk('check')
         self.game.LASTBET = 0
         self.Good()
         self.LASTACTION = '过牌'
     
     def Call(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Call')
+        self.Talk('call')
         bet = self.game.POOL.CURRENTMAX - self.LASTBET
         self.logger.debug(f'{self.NAME}准备跟注 ${bet}')
         self.Bet(bet)
@@ -265,24 +340,35 @@ class Player():
     def Raise(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Raise')
         # q should mostly be 2~5
-        q = int(random.random()*3) + int(random.random()*2)+1
+        q = int(random.random()*3) * int(random.random()*2) + 2
         factor = self.game.LASTBET or self.game.BB
         bet  = q * factor - self.LASTBET
         if bet >= self.CASH:
-            self.Talk('allin')
+            self.AllIn()
         else:
-            self.game.LASTBET = bet
+            self.Talk('raise')
             self.logger.debug(f'{self.NAME}准备加注 ${bet}')
             self.Bet(bet)
-        self.LASTACTION = '加注'
+            self.LASTACTION = '加注'
+            
 
     def AllIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] AllIn')
+        self.Talk('allin')
         bet = self.CASH
-        self.game.LASTBET = bet
         self.logger.debug(f'{self.NAME}准备全下 ${bet}')
+
+        # create side pool if necessary
+        if bet < self.game.POOL.CURRENTMAX:
+            self.SIDEPOOL = self.game.POOL.SidePool(self, bet)
+
         self.Bet(bet)
         self.LASTACTION = 'All In'
+
+        #test, seems not bad so far
+        for p in self.game.PLAYERS:
+            if p is not self:
+                p.Comment(self, 'allin')
     
     @property
     def ALLIN(self):
@@ -293,6 +379,7 @@ class Player():
 
     def Fold(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Fold')
+        self.Talk('fold')
         self.ONTABLE = False
         ontable = '、'.join([p.NAME for p in self.game.PLAYERS])
         print(f'{self.NAME}弃牌，玩家还剩{ontable}')
@@ -315,7 +402,8 @@ class Player():
     def Bye(self):
         self.logger.debug(f'[Player] {self.NAME} [action] Bye')
         self.ONTABLE = False
-        self.game.POSITIONS.Remove(self)
+        flag = self.game.POSITIONS.Remove(self)
+        self.logger.debug(f'Player.game.POSITIONS.Remove({self}) => {flag}')
         self.logger.info(f'{self.NAME}下桌了')
         self.logger.debug(f'self.game.POSITIONS {self.game.POSITIONS}')
         self.logger.debug(f'self.game.PLAYERS {self.game.PLAYERS}')
