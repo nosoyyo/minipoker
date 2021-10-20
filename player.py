@@ -1,8 +1,9 @@
 import time
 import random
 import logging
-from rich import print
+from rich import print, box
 from thpoker.core import Hand, Combo
+from rich.table import Table as RichTable
 from simple_term_menu import TerminalMenu
 
 from corpus import Corpus
@@ -82,7 +83,6 @@ class Player():
         elif bet >= self.game.LASTBET:
             money = [p.CASH + p.LASTBET for p in self.game.PLAYERS if p is not self]
             if bet >= max(money):
-                print(f'here we go into this fucking branch')
                 self.logger.debug(f'max money ${max(money)}')
                 bet = max(money) - self.LASTBET
                 self.logger.info(f'最多可下注 ${bet}')
@@ -131,7 +131,11 @@ class Player():
             word = random.choice(self.CORPUS.BYE)
         else:
             word = command
-        print(f'{self.NAME}：{word}\n')
+        
+        table = RichTable(box=box.ROUNDED)
+        table.add_column(justify="left")
+        table.add_row(f'{self.NAME}：[bold green]{word}\n')
+        print(table)
 
     def Comment(self, opponent, command):
         #test
@@ -248,7 +252,7 @@ class Player():
             if not self.CASH:
                 self.logger.debug(f'{self.NAME}无筹码，跳过此轮')
             else:
-                self.logger.info(f'{self.NAME}正在决策...\n')
+                print(f'{self.NAME}正在决策...\n')
                 self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
 
                 power = self.PowerCheck() #TODO

@@ -1,5 +1,9 @@
 # HIGHEST PRIORITY
 
+#ISSUE could be using `Player.ACTIVE` instead of current rough implementation
+
+#ISSUE when no `Player` has `CASH` to `Call`, human player must have no `Options`
+
 #ISSUE `max(game.CASHES)` need to sum up `bet` and `CASH` for each `Player`
 
 #ISSUE `Player` doesn't have to `ShowHand` when win a one guy left situation

@@ -8,7 +8,7 @@ from rich.live import Live
 from game import Game
 
 logging.basicConfig(
-    level="INFO",
+    level="WARNING",
     format="'[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s'",
     datefmt="[%X]",
     handlers=[RichHandler(rich_tracebacks=True)]
@@ -17,12 +17,12 @@ logging.basicConfig(
 
 #FORMAT = logging.Formatter('[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s')
 logger = logging.getLogger('main')
-sh = logging.StreamHandler()
-fh = logging.FileHandler('main.log')
-rh = RichHandler()
+#rh = RichHandler()
+#sh = logging.StreamHandler()
 #sh.setFormatter(FORMAT)
+#logger.addHandler(sh)
 #fh.setFormatter(FORMAT)
-logger.addHandler(sh)
+fh = logging.FileHandler('main.log')
 logger.addHandler(fh)
 
 
