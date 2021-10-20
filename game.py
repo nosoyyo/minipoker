@@ -20,29 +20,36 @@ from positions import Positions
 
 class Game():
 
+    num_list = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
+    suit_list = ['s', 'h', 'c', 'd']
     LASTBET = None
     LASTACTION = {}
     
     def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.game')
         self.console = Console()
+
         self.WORLD = World(self)
+
         self.POSITIONS = Positions(n_AI)
         self.BUYIN = buyin
         self.NUMOFGAMES = 0
-        self._raw_table = []
-        self.RAWCARDS = self.Shuffle()
-        self.SB = SB
-        self.BB = SB*2
-        
 
         self.PLAYER = Player(self, is_AI=False)
 
+        self.SB = SB
+        self.BB = SB*2
+        
+        self._raw_table = []
+        self.RAWCARDS = self.Shuffle()
+        self.CARDSDEALT = []
+
     @property
     def STATUS(self):
-        status = self.__dict__
-        for p in self.POSITIONS.values():
+        status = self.__dict__.copy()
+        for p in self.POSITIONS.__dict__.values():
             status[p.NAME] = p.__dict__
+        status['POOL'] = self.POOL.__dict__
         return status
 
     @property
@@ -86,12 +93,16 @@ class Game():
         self.LASTBET = self.BB
         self.WINNER = None
 
+        self._raw_table = []
+        self.CARDSDEALT = []
+        self.RAWCARDS = self.Shuffle()
+
         # init Player.HAND and game.TABLE
         for p in self.PLAYERS:
             p._raw_hand = []  
-            self.Deal(p)
-        self._raw_table = []
-        self.RAWCARDS = self.Shuffle()
+            p._raw_hand.append(self.Deal())
+            p._raw_hand.append(self.Deal())
+            self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
 
         # init or re-init POOL
         self.POOL = Pool(self)
@@ -126,19 +137,31 @@ class Game():
         return _dict[self._stage]
     
     def Shuffle(self):
-        num_list = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K']
-        suit_list = ['s', 'h', 'c', 'd']
-        RawCards = [x + y for x in num_list for y in suit_list]
+        RawCards = [x + y for x in self.num_list for y in self.suit_list]
         random.shuffle(RawCards)
         return RawCards
 
-    def Deal(self, p, method='decisive'):
+    def Deal(self, method='decisive'):
+        '''
+        :return: a single card in raw form like 'As'
+        '''
         if method == 'decisive':
-            p._raw_hand.append(self.RAWCARDS.pop())
-            p._raw_hand.append(self.RAWCARDS.pop())
-            self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
+            self.logger.debug(f'dealing card with `decisive` method')
+            card = self.RAWCARDS.pop()
+            if card in self.CARDSDEALT:
+                self.Deal('decisive')
+            self.CARDSDEALT.append(card)
+            return self.RAWCARDS.pop()
+     
         elif method == 'dynamic':
-            pass
+            self.logger.debug(f'dealing card with `dynamic` method')
+            random.shuffle(self.num_list)
+            random.shuffle(self.suit_list)
+            card = random.choice(self.num_list) + random.choice(self.suit_list)
+            if card in self.CARDSDEALT:
+                self.Deal('dynamic')
+            self.CARDSDEALT.append(card)
+            return card
  
     def ShowTable(self):
         if self.TABLE:
@@ -168,9 +191,9 @@ class Game():
             self.Actions()
         elif self._stage == 2:
             # method == decisive
-            self._raw_table.append(self.RAWCARDS.pop())
-            self._raw_table.append(self.RAWCARDS.pop())
-            self._raw_table.append(self.RAWCARDS.pop())
+            self._raw_table.append(self.Deal())
+            self._raw_table.append(self.Deal())
+            self._raw_table.append(self.Deal())
 
             self.Actions()
         elif 2 < self._stage < 5:

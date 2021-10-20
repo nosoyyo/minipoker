@@ -42,6 +42,9 @@ class Player():
             info = f'[{self.POSITION}] {info}'
         if self.INDEX:
             info = f'[{self.INDEX}] {info}'
+        else:
+            #dirty hack
+            info = f'[0] {info}'
         return info
 
     @property
@@ -76,30 +79,27 @@ class Player():
             self.logger.fatal(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
             raise OverBetError()
         # max valid bet
-        elif self.CASH >= self.game.LASTBET:
-            second = self.game.CASHES[-2]
-            if bet > second:
+        elif bet >= self.game.LASTBET:
+            money = [p.CASH + p.LASTBET for p in self.game.PLAYERS if p is not self]
+            if bet >= max(money):
                 print(f'here we go into this fucking branch')
-                self.logger.debug(f'second most cash ${second}')
-                bet = second
-                self.logger.info(f'最多可下注 ${second}')
-                self.logger.info(f'{self} [Bet] {bet}')
-                self.Bet(bet)
+                self.logger.debug(f'max money ${max(money)}')
+                bet = max(money) - self.LASTBET
+                self.logger.info(f'最多可下注 ${bet}')
+                self._bet(bet)
             else:
-                self.CASH -= bet
-                self.game.POOL.Add(self, bet)
-                self.game.LASTACTION = {self:bet}
-                self.game.LASTBET = bet
-                self.LASTBET += bet
-                self.Good()
+                self._bet(bet)
         else:
-            self.logger.info(f'{self} [Bet] {bet}')
-            self.CASH -= bet
-            self.game.POOL.Add(self, bet)
-            self.game.LASTACTION = {self:bet}
-            self.game.LASTBET = bet
-            self.LASTBET += bet
-            self.Good()
+            self._bet(bet)
+    
+    def _bet(self, bet):
+        self.logger.info(f'{self} [Bet] {bet}')
+        self.CASH -= bet
+        self.game.POOL.Add(self, bet)
+        self.game.LASTACTION = {self:bet}
+        self.game.LASTBET = bet
+        self.LASTBET += bet
+        self.Good()
         return self.game.POOL
 
     def Talk(self, command, p=None):
@@ -138,7 +138,7 @@ class Player():
         if command == 'allin' and self.Q > 0.6:
             CORPUS = Corpus(self)
             if len(self.game.TABLE.items):
-                comment = f'nb，四条{random.choice(self.game.TABLE.items)}呗{opponent.NAME}'
+                comment = f'nb，三条{random.choice(self.game.TABLE.items)[0]}呗{opponent.NAME}'
             else:
                 comment = f'{random.choice(CORPUS.COMMENTALLIN)}{opponent.NAME}'
             
@@ -181,23 +181,23 @@ class Player():
         '''
         most parameters fine-tuning work here
         '''
-        if 0 < power < 18:
+        if 0 < power < 12:
             self.Fold()
-        elif 18 <= power < 46:
+        elif 12 <= power < 27:
             if not self.game.LASTBET:
                 self.Check()
             else:
                 self.Fold()
-        elif 46 <= power < 66:
+        elif 27 <= power < 66:
             q = random.random()
-            if q > 0.6:
+            if q > 0.4:
                 self.Call()
             else:
                 if not self.game.LASTBET:
                     self.Check()
                 else:
                     self.Fold()
-        elif 66 <= power < 81:
+        elif 66 <= power < 88:
             q = random.random()
             if q > 0.6:
                 self.Raise()
@@ -206,9 +206,9 @@ class Player():
                     self.Check()
                 else:
                     self.Call()
-        elif 81 <= power < 98:
+        elif 88 <= power < 95:
             self.Raise()
-        elif power >= 98:
+        elif power >= 95:
             self.logger.debug(f'power >= 94 => {power}')
             self.AllIn()
         else:
@@ -314,7 +314,7 @@ class Player():
                     menu = TerminalMenu(options)
                     decision = menu.show()
                     decision = options[decision]
-                    self.logger.debug(f'user input: {decision}')
+                    #self.logger.debug(f'user input: {decision}')
                     self.Action(command=decision)
                 else:
                     print(f'你已经 all in 了，看戏吧')

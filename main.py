@@ -8,7 +8,7 @@ from rich.live import Live
 from game import Game
 
 logging.basicConfig(
-    level="DEBUG",
+    level="INFO",
     format="'[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s'",
     datefmt="[%X]",
     handlers=[RichHandler(rich_tracebacks=True)]

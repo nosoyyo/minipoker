@@ -1,36 +1,26 @@
 # HIGHEST PRIORITY
 
-#ISSUE a `Player` `Call` himself after just `Check`
+#ISSUE `max(game.CASHES)` need to sum up `bet` and `CASH` for each `Player`
 
-#ISSUE `Player` didn't disappear from `game.POSITIONS` after `Player.Bye`, neither his status didn't get refreshed. could be something wrong with `Player.AllIn`
-
-#ISSUE a total mess of `game.PLAYERS` or `game.POSITIONS` after 2nd `NewGame`
-
-#ISSUE repeated cards in `Player.HAND` and `game.TABLE`
-
-#ISSUE when two `Player` left @`Flop`, they all folded and 
-
-#ISSUE `Player` need to `Decide` in each round if they could
+#ISSUE `Player` doesn't have to `ShowHand` when win a one guy left situation
 
 #ISSUE `Player` need to `ShowHand` when win a p2p All-in situation
+
+#FIXED repeated cards in `Player.HAND` and `game.TABLE` => that's to add `method dynamic` for `Deal`
+
+#FIXED when two `Player` left @`Flop`, they all folded and 
+
+#FIXED `Player` need to `Decide` in each round if they could
+
+#FIXED a total mess of `game.PLAYERS` or `game.POSITIONS` after 2nd `NewGame`
+
+#FIXED `Player` didn't disappear from `game.POSITIONS` after `Player.Bye`, neither his status didn't get refreshed. could be something wrong with `Player.AllIn`
+
+#FIXED a `Player` `Call` himself after just `Check`
 
 #DONE put `POOL.Account` somewhere between `NewRound` or `Action`
 
 #FIXED repeated cards in `Player.HAND` and `game.TABLE`
-
-## rewrite game logic
-
-#FIXED `Player` can only bet a max valid bet no matter how much `CASH` he's got
-
-#FIXED infinite loop @Preflop when bets are even`
-
-#FIXED should call `Summary()` before `Flop` when there's only 1P left
-
-#FIXED offtable player need to get on when `NewGame()`
-
-#DONE add `Positions.Remove`
-
-#DONE adjust `Player.Bye`
 
 ## `Pool`
 
@@ -101,6 +91,20 @@
 #DONE add `class Positions`
 
 #DONE add `Player.WEALTH`
+
+## rewrite game logic
+
+#FIXED `Player` can only bet a max valid bet no matter how much `CASH` he's got
+
+#FIXED infinite loop @Preflop when bets are even`
+
+#FIXED should call `Summary()` before `Flop` when there's only 1P left
+
+#FIXED offtable player need to get on when `NewGame()`
+
+#DONE add `Positions.Remove`
+
+#DONE adjust `Player.Bye`
 
 # IMPROVEMENT
 

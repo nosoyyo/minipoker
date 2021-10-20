@@ -77,6 +77,7 @@ class Positions():
             p = self.__dict__[k]
             if p:
                 p.__dict__[k] = True
+                p.POSITION = k
         
         logger.debug(f'POSITIONS after Rotate {self}')
 
