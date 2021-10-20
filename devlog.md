@@ -20,6 +20,8 @@
 
 ## rewrite game logic
 
+#FIXED `Player` can only bet a max valid bet no matter how much `CASH` he's got
+
 #FIXED infinite loop @Preflop when bets are even`
 
 #FIXED should call `Summary()` before `Flop` when there's only 1P left

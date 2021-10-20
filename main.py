@@ -3,6 +3,7 @@ import logging
 from rich.logging import RichHandler
 from rich.traceback import install
 install(show_locals=True)
+from rich.live import Live
 
 from game import Game
 
@@ -26,6 +27,7 @@ logger.addHandler(fh)
 
 
 def main():
+        #with Live(game, refresh_per_second=4, screen=True):
 
-    game = Game()
-    game.NewGame()
+        game = Game()
+        game.NewGame()

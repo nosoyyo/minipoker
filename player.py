@@ -12,7 +12,7 @@ from exceptions import OverBetError, InvalidBetError
 class Player():
     
     def __init__(self, game, name=None, is_AI=True,) -> None:
-        self.logger = logging.getLogger('main.player')
+        self.logger = logging.getLogger('main.Player')
 
         self.game = game
 
@@ -68,20 +68,32 @@ class Player():
             pass
 
     def Bet(self, bet):
+        self.logger.debug(f'bet {bet} self.game.CASHES {self.game.CASHES}')
+
         if bet < self.game.SB or type(bet) is not int:
             raise InvalidBetError(f'cannot bet ${bet}!')
         elif self.CASH < bet:
             self.logger.fatal(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
             raise OverBetError()
+        # max valid bet
+        elif self.CASH >= self.game.LASTBET:
+            second = self.game.CASHES[-2]
+            if bet > second:
+                print(f'here we go into this fucking branch')
+                self.logger.debug(f'second most cash ${second}')
+                bet = second
+                self.logger.info(f'最多可下注 ${second}')
+                self.logger.info(f'{self} [Bet] {bet}')
+                self.Bet(bet)
+            else:
+                self.CASH -= bet
+                self.game.POOL.Add(self, bet)
+                self.game.LASTACTION = {self:bet}
+                self.game.LASTBET = bet
+                self.LASTBET += bet
+                self.Good()
         else:
             self.logger.info(f'{self} [Bet] {bet}')
-            # max valid bet
-            cashes = [p.CASH > bet for p in self.game.PLAYERS]
-            if any(cashes):
-                if bet > max(cashes):
-                    bet = max(cashes)
-                    self.logger.info(f'最多可下注 ${max(cashes)}')
-
             self.CASH -= bet
             self.game.POOL.Add(self, bet)
             self.game.LASTACTION = {self:bet}
@@ -210,6 +222,17 @@ class Player():
                 self.AllIn()
             elif command == 'fold':
                 self.Fold()
+            #DEBUG
+            elif command == ': $cash  :':
+                self.CASH += self.game.BUYIN
+                self.logger.debug(f'出于DEBUG之合法目的，你的筹码增加${self.game.BUYIN}')
+                self.Decide()
+            elif command == ':locals():':
+                self.logger.debug(f'locals() => {locals()}')
+                self.Decide()
+            elif command == ': status :':
+                print(self.game.STATUS)
+                self.Decide()
 
     @property
     def Q(self):
@@ -247,6 +270,8 @@ class Player():
                             self.Check()
                         else:
                             self.Raise()
+                    else:
+                        self.Check()
                     #self.Action(power) #should be removed this line
                 else:
                     if self.LASTBET == self.game.POOL.CURRENTMAX:
@@ -269,7 +294,7 @@ class Player():
             input('\n\n\nPress ENTER to continue...\n')
         else:
             if self.ONTABLE:
-                self.logger.info(f'game.LASTACTION {self.game.LASTACTION}')
+                #self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
                 self.game.POOL.ShowCurrent()
                 print(f'你的手牌：{self.HAND}')
                 if self.game._stage >= 2:
@@ -296,10 +321,10 @@ class Player():
                     input('Press ENTER to continue...\n')
 
     def Options(self):
-        # options = ['allin','call','check','fold','raise',]
+        # options = ['allin','call','check','fold','raise','$cash','locals',]
         options = []
         if self.game.POOL.CURRENTMAX >= self.CASH:
-            options = ['allin', 'fold']
+            options = ['allin', 'fold',]
         else:
             if self.game._stage == 0:
                 if self.SB:
@@ -311,8 +336,12 @@ class Player():
                     options = ['check','raise','allin','fold',]
                 else:
                     options = ['call','raise','allin','fold',]
+        #debug
+        options.append(': $cash  :')
+        options.append(':locals():')
+        options.append(': status :')
 
-        self.logger.debug(f'options: {options}')
+        #self.logger.debug(f'options: {options}')
         return options
 
     def Good(self):

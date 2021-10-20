@@ -37,11 +37,24 @@ class Game():
         
 
         self.PLAYER = Player(self, is_AI=False)
-    
+
+    @property
+    def STATUS(self):
+        status = self.__dict__
+        for p in self.POSITIONS.values():
+            status[p.NAME] = p.__dict__
+        return status
+
     @property
     def PLAYERS(self):
         ps = [i for i in self.POSITIONS.__dict__.values() if i]
         return [p for p in ps if p.ONTABLE]
+
+    @property
+    def CASHES(self):
+        cashes = [p.CASH for p in self.PLAYERS]
+        cashes.sort()
+        return cashes
 
     def NewGame(self) -> None:
 
@@ -190,8 +203,6 @@ class Game():
 
                 over = self.CheckState()
                 if over:
-                    for p in self.PLAYERS:
-                        p.ShowHand()
                     self.Summary()
 
                 self.POOL.ShowCurrent()
