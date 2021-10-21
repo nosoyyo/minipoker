@@ -2,6 +2,7 @@ import time
 import random
 import logging
 from rich import print, box
+from transitions import Machine
 from thpoker.core import Hand, Combo
 from rich.table import Table as RichTable
 from simple_term_menu import TerminalMenu
@@ -11,6 +12,8 @@ from exceptions import OverBetError, InvalidBetError
 
 
 class Player():
+
+    STATES = ['ACTIVE','DEACTIVE',]
     
     def __init__(self, game, name=None, is_AI=True,) -> None:
         self.logger = logging.getLogger('main.Player')
@@ -34,6 +37,11 @@ class Player():
         self.LASTBET = 0
         self.LASTACTION = None
         self.GOOD = False
+
+        # transitions
+        self.m = Machine(model=self, states=self.STATES, initial='DEACTIVE')
+        self.m.add_transition(trigger='Active', source='*', dest='ACTIVE')
+        self.m.add_transition(trigger='Deactive', source='*', dest='DEACTIVE')
 
     def __repr__(self) -> str:
         info = f'<{self.NAME} 总盈亏${self.WEALTH} 筹码${self.CASH}>'
@@ -142,7 +150,8 @@ class Player():
         if command == 'allin' and self.Q > 0.6:
             CORPUS = Corpus(self)
             if len(self.game.TABLE.items):
-                comment = f'nb，三条{random.choice(self.game.TABLE.items)[0]}呗{opponent.NAME}'
+                num = random.choice(self.game.TABLE.items).__str__()[0]
+                comment = f'nb，三条{num}呗{opponent.NAME}'
             else:
                 comment = f'{random.choice(CORPUS.COMMENTALLIN)}{opponent.NAME}'
             
@@ -320,6 +329,9 @@ class Player():
                     decision = options[decision]
                     #self.logger.debug(f'user input: {decision}')
                     self.Action(command=decision)
+                elif all([p.ALLIN for p in self.game.PLAYERS]):
+                    print(f'你已经 all in 了，看戏吧')
+                    input('Press ENTER to continue...\n')
                 else:
                     print(f'你已经 all in 了，看戏吧')
                     input('Press ENTER to continue...\n')

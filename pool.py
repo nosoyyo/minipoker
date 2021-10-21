@@ -103,15 +103,9 @@ class Pool():
 
         c = self.CURRENT
         for p in c:
-            if p is not [k for k in self.game.LASTACTION][0]:
+            if p.state != 'ACTIVE':
                 table.add_row(p.NAME, str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
             else:
-                index = self.game.PLAYERS.index(p)
-                if index == len(self.game.PLAYERS):
-                    index = 0
-                else:
-                    index += 1
-                p = self.game.PLAYERS[index]
                 table.add_row(f'[reverse]{p.NAME}', str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
         console.print(table)
 

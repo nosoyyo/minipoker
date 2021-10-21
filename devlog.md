@@ -1,14 +1,16 @@
 # HIGHEST PRIORITY
 
+REFACTOR & RESTRUCTURE
+
 #ISSUE could be using `Player.ACTIVE` instead of current rough implementation
 
 #ISSUE when no `Player` has `CASH` to `Call`, human player must have no `Options`
 
-#ISSUE `max(game.CASHES)` need to sum up `bet` and `CASH` for each `Player`
-
 #ISSUE `Player` doesn't have to `ShowHand` when win a one guy left situation
 
 #ISSUE `Player` need to `ShowHand` when win a p2p All-in situation
+
+#FIXED `max(game.CASHES)` need to sum up `bet` and `CASH` for each `Player`
 
 #FIXED repeated cards in `Player.HAND` and `game.TABLE` => that's to add `method dynamic` for `Deal`
 
@@ -28,21 +30,21 @@
 
 ## `Pool`
 
-#TODO change `Pool` from list to dict, match `Player` and his `LASTBET
+~~#TODO change `Pool` from list to dict, match `Player` and his `LASTBET~~
 
-#TODO `Player.Fold` holds a status in `POOL.pools[]`, not `0`
+~~#TODO `Player.Fold` should hold a status in `POOL.pools[]`, not `0`~~
 
 ## accounting
 
-#ISSUE match every player's bet within one round
+#FIXED match every player's bet within one round
 
-#ISSUE wrong accounting when `game.OVER`
+#FIXED wrong accounting when `game.OVER`
 
 # ISSUE
 
-#ISSUE SB should be able to `Fold`, not to be forced to align BB
+#FIXED SB should be able to `Fold`, not to be forced to align BB
 
-#FIXED `Raise` should be more than `BB`
+#FIXED `Raise` should be greater than `BB`
 
 #FIXED repeated `Player` everywhere
 
@@ -61,12 +63,12 @@
 #FIXED the 1st player of flop round should be able to `Check`
 
 # TODO
+#TODO side pool regularization
 
 #TODO real `PowerCheck` based on 1~13, T+, TT+ and pocket pair etc.
 
 #TODO end-game `Summary`, actually one more `STAGE`
 
-#TODO side pool regularization
 
 #TODO player lost all money should be move into a new list
 
@@ -136,9 +138,9 @@
 
 # LONGTERM PLAN
 
-#TODO probability helper/trainer
+**#TODO** probability helper/trainer
 
-#TODO automatic game for like 100,000 games
+ #TODO automatic game for like 100,000 games
 
 #TODO go online
 
