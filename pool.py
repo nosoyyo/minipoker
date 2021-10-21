@@ -107,7 +107,7 @@ class Pool():
                 table.add_row(p.NAME, str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
             else:
                 table.add_row(f'[reverse]{p.NAME}', str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
-        console.print(table)
+        self.game.SCREEN.Update(table, 'right')
 
     def SidePool(self, p, bet) -> None:
         pass

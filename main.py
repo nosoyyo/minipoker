@@ -1,9 +1,10 @@
+__VERSION__ = '-0.01α'
+
 import random
 import logging
-from rich.logging import RichHandler
 from rich.traceback import install
 install(show_locals=True)
-from rich.live import Live
+from rich.logging import RichHandler
 
 from game import Game
 

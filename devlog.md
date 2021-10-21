@@ -1,6 +1,8 @@
 # HIGHEST PRIORITY
 
-REFACTOR & RESTRUCTURE
+maybe some serious licensing and devlog
+
+REFACTOR & RESTRUCTURE: +`transitions` + `Rich.Layout`
 
 #ISSUE could be using `Player.ACTIVE` instead of current rough implementation
 

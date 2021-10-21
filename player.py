@@ -140,10 +140,8 @@ class Player():
         else:
             word = command
         
-        table = RichTable(box=box.ROUNDED)
-        table.add_column(justify="left")
-        table.add_row(f'{self.NAME}：[bold green]{word}\n')
-        print(table)
+        content = f'{self.NAME}：[bold green]{word}\n'
+        self.game.SCREEN.Update(content, 'title')
 
     def Comment(self, opponent, command):
         #test
@@ -304,7 +302,7 @@ class Player():
             s = random.random() + 0.4
             time.sleep(s)
             self.game.POOL.ShowCurrent()
-            input('\n\n\nPress ENTER to continue...\n')
+            #input('\n\n\nPress ENTER to continue...\n')
         else:
             if self.ONTABLE:
                 #self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
@@ -331,10 +329,10 @@ class Player():
                     self.Action(command=decision)
                 elif all([p.ALLIN for p in self.game.PLAYERS]):
                     print(f'你已经 all in 了，看戏吧')
-                    input('Press ENTER to continue...\n')
+                    #input('Press ENTER to continue...\n')
                 else:
                     print(f'你已经 all in 了，看戏吧')
-                    input('Press ENTER to continue...\n')
+                    #input('Press ENTER to continue...\n')
 
     def Options(self):
         # options = ['allin','call','check','fold','raise','$cash','locals',]

@@ -15,6 +15,7 @@ from pool import Pool
 from exceptions import *
 from world import World
 from player import Player
+from screen import Screen
 from utils import SortCombo
 from positions import Positions
 
@@ -26,6 +27,7 @@ class Game():
     LASTBET = None
     LASTACTION = {}
     STAGES = ['INIT','BLIND','PREFLOP','FLOP','TURN','RIVER','OVER']
+    SCREEN = Screen()
     
     def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.game')
@@ -206,6 +208,7 @@ class Game():
             self._raw_table.append(self.RAWCARDS.pop())
             self.Actions()
         elif self._stage == 5:
+            self.Actions()
             self.Summary()
 
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
@@ -272,10 +275,13 @@ class Game():
     def Summary(self):
         self.POOL.Account()
         if self._stage > 1:
-            print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}')
+            if len(self.PLAYERS) > 1:
+                for p in self.PLAYERS:
+                    p.ShowHand()
+                print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}')
+            else:
+                print(f'恭喜{self.WINNER.NAME}赢得全部底池 {self.POOL}')
         else:
-            for p in self.PLAYERS:
-                p.ShowHand()
             print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}')
         input('Press ENTER to continue...\n')
 
