@@ -23,25 +23,35 @@ class Screen:
         self._chat = []
         self.title = "[magenta]zhihu special edition"
         self.subtitle = __VERSION__
-        
+
+        # init title       
+        self.LAYOUT['title'].size = 3
+        self.LAYOUT['title'].minimum_size = 3
         self.LAYOUT["title"].update(Panel('MINIPOKER', title=self.title, subtitle=self.subtitle))
 
+        # init table
+        self.LAYOUT['table'].minimum_size = 12
+
+        # init lower
         self.LAYOUT["lower"].split_row(
         Layout(name="menu"),
+        Layout(name="tech"),
         Layout(name="chat"),
         )
 
         self.LAYOUT["menu"].update(Panel('test', title='MENU', subtitle=None))
+        self.LAYOUT["tech"].update(Panel('test', title='技术区', subtitle=None))
         self.LAYOUT["chat"].update(Panel('test', title='CHAT', subtitle='📱'))
-
-        self.LAYOUT['title'].size = 3
-        self.LAYOUT['title'].minimum_size = 3
-        self.LAYOUT['table'].minimum_size = 12
-        #print(self.LAYOUT)
     
-    #def __repr__(self):
-    #    print(self.LAYOUT)
-    #    return '<Screen>'
+        with Live(
+                self.LAYOUT,
+                refresh_per_second=4,
+                screen=True,
+                transient=True,
+                ) as live:
+            #for _ in range(40):
+            time.sleep(0.4)
+            live.update(self.LAYOUT)
 
     def Chat(self, content):
         self._chat.append(content)

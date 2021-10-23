@@ -1,0 +1,7 @@
+#!/Users/daguo/miniconda3/bin/python
+
+# -*- coding: utf-8 -*-
+
+from main import main
+
+main()
