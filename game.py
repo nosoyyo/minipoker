@@ -12,8 +12,8 @@ from rich.console import Console
 from rich.table import Table as RichTable
 
 from pool import Pool
-from exceptions import *
 from world import World
+from exceptions import *
 from player import Player
 from screen import Screen
 from utils import SortCombo
@@ -212,11 +212,9 @@ class Game():
             self.Summary()
 
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
-        input('Press ENTER to continue...\n')
+        #input('Press ENTER to continue...\n')
 
     def Actions(self):
-        if self.TABLE:
-            self.logger.info(f'\n当前桌面 {self.TABLE}\n')
         self.logger.debug(f'本轮下注 {self.POOL.CURRENT}')
 
         if self._stage == 0:
@@ -264,7 +262,7 @@ class Game():
                 self.logger.debug('game.POOL.Account() =>')
                 print(self.POOL)
                 self.logger.debug(self.POOL.Show())
-                input('\n\nPress ENTER to continue...\n')
+                #input('\n\nPress ENTER to continue...\n')
                 self._stage += 1
                 self.NewRound()
         else:
@@ -283,7 +281,7 @@ class Game():
                 print(f'恭喜{self.WINNER.NAME}赢得全部底池 {self.POOL}')
         else:
             print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}')
-        input('Press ENTER to continue...\n')
+        #input('Press ENTER to continue...\n')
 
         # losers say bye
         for p in self.PLAYERS:

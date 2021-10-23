@@ -1,4 +1,9 @@
-__VERSION__ = '-0.01α'
+__AUTHOR__ = "arslan"
+__EMAIL__ = "oyyoson@gmail.com"
+__COPYRIGHT__ = "Copyright © 2021 MSFC Studios. All rights reserved."
+__LICENSE__ = "MIT"
+__VERSION_INFO__ = (0, 0, -1, 'α')
+__VERSION__ = ".".join(map(str, __VERSION_INFO__))
 
 import random
 import logging

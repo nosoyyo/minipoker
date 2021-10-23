@@ -5,8 +5,8 @@ from rich import print, box
 from transitions import Machine
 from thpoker.core import Hand, Combo
 from rich.table import Table as RichTable
-from simple_term_menu import TerminalMenu
 
+from menu import Menu
 from corpus import Corpus
 from exceptions import OverBetError, InvalidBetError
 
@@ -131,7 +131,8 @@ class Player():
             word = random.choice(self.CORPUS.ALLIN)
         elif command == 'trash':
             trash = random.choice(self.CORPUS.TRASHTALK)
-            word = f'{trash}{p.NAME}'
+            opponent = self.ChooseOpponent()
+            word = f'{trash}{opponent.NAME}'
         elif command == 'buyin':
             CORPUS = Corpus(self)
             word = random.choice(CORPUS.BUYIN)
@@ -141,7 +142,7 @@ class Player():
             word = command
         
         content = f'{self.NAME}：[bold green]{word}\n'
-        self.game.SCREEN.Update(content, 'title')
+        self.game.SCREEN.Chat(content)
 
     def Comment(self, opponent, command):
         #test
@@ -259,7 +260,7 @@ class Player():
             if not self.CASH:
                 self.logger.debug(f'{self.NAME}无筹码，跳过此轮')
             else:
-                print(f'{self.NAME}正在决策...\n')
+                self.game.SCREEN.Update(f'{self.NAME}正在决策...', 'title')
                 self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
 
                 power = self.PowerCheck() #TODO
@@ -301,13 +302,14 @@ class Player():
                         self.Action(power)
             s = random.random() + 0.4
             time.sleep(s)
-            self.game.POOL.ShowCurrent()
+            self.game.POOL.Show()
             #input('\n\n\nPress ENTER to continue...\n')
         else:
+            # human player starts deciding from here
             if self.ONTABLE:
                 #self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
-                self.game.POOL.ShowCurrent()
-                print(f'你的手牌：{self.HAND}')
+                self.game.POOL.Show()
+                self.game.SCREEN.Update(f'你的手牌：{self.HAND}', 'title')
                 if self.game._stage >= 2:
                     print(f'当前桌面 {self.game.TABLE}')
                     print(f'你的牌力 {self.COMBO}')
@@ -322,20 +324,18 @@ class Player():
                     else:
                         print(f'你的筹码：${self.CASH}')
                     options = self.Options()
-                    menu = TerminalMenu(options)
-                    decision = menu.show()
-                    decision = options[decision]
+                    #menu = TerminalMenu(options)
+                    menu = Menu(options, self)
+                    decision = menu.Show()
                     #self.logger.debug(f'user input: {decision}')
                     self.Action(command=decision)
                 elif all([p.ALLIN for p in self.game.PLAYERS]):
-                    print(f'你已经 all in 了，看戏吧')
-                    #input('Press ENTER to continue...\n')
+                    self.game.SCREEN.Update(f'你已经 all in 了，看戏吧', 'title')
                 else:
-                    print(f'你已经 all in 了，看戏吧')
-                    #input('Press ENTER to continue...\n')
+                    self.game.SCREEN.Update(f'你已经 all in 了，看戏吧', 'title')
 
     def Options(self):
-        # options = ['allin','call','check','fold','raise','$cash','locals',]
+        # options = ['allin','call','check','fold','raise',':$cash',':status',]
         options = []
         if self.game.POOL.CURRENTMAX >= self.CASH:
             options = ['allin', 'fold',]
@@ -425,7 +425,7 @@ class Player():
         self.Talk('fold')
         self.ONTABLE = False
         ontable = '、'.join([p.NAME for p in self.game.PLAYERS])
-        print(f'{self.NAME}弃牌，玩家还剩{ontable}')
+        self.game.SCREEN.Update(f'{self.NAME}弃牌，玩家还剩{ontable}', 'title')
         #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
         self.LASTACTION = '弃牌'
 

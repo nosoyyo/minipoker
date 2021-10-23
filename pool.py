@@ -78,36 +78,31 @@ class Pool():
 
     def Show(self):
         t = f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n'
-        if self.game.TABLE:
-            t = f't{self.game.TABLE}'
-        table = Table(title=t)
+        st = '祝您好运😝'
+        if len(self.game.TABLE.items):
+            st = f'{self.game.TABLE}'
+        table = Table()
+        table.add_column("位置", justify="right", style="cyan", no_wrap=True)
         table.add_column("玩家", justify="right", style="cyan", no_wrap=True)
         table.add_column("总盈亏", style="blue")
         table.add_column("筹码", style="magenta")
-        table.add_column("本局下注", justify="right", style="green")
-        table.add_column("行动", justify="middle", style="white")
-
-        for p in self.pools[0]:
-            table.add_row(p.NAME, str(p.WEALTH), str(p.CASH), str(self.pools[0][p]), p.LASTACTION)
-        console.print(table)
-
-    def ShowCurrent(self):
-        t = f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n'
-        if self.game.TABLE:
-            t = f't{self.game.TABLE}'
-        table = Table(title=f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n')
-        table.add_column("玩家", justify="right", style="cyan", no_wrap=True)
-        table.add_column("筹码", style="magenta")
-        table.add_column("本轮下注", justify="right", style="green")
+        table.add_column("当前下注", justify="right", style="green")
+        table.add_column("总下注", justify="right", style="green")
         table.add_column("行动", justify="middle", style="white")
 
         c = self.CURRENT
         for p in c:
             if p.state != 'ACTIVE':
-                table.add_row(p.NAME, str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
+                pos = p.POSITION
+                name = p.NAME
             else:
-                table.add_row(f'[reverse]{p.NAME}', str(p.CASH), str(self.CURRENT[p]), p.LASTACTION)
-        self.game.SCREEN.Update(table, 'right')
+                pos = f'[reverse]{p.POSITION}'
+                name = f'[reverse]{p.NAME}'
+            
+            table.add_row(pos, name, str(p.WEALTH), str(p.CASH), str(self.CURRENT[p]), str(self.pools[0][p]), p.LASTACTION)
+
+        self.game.SCREEN.Update(table, 'table', title=t, subtitle=st)
+
 
     def SidePool(self, p, bet) -> None:
         pass
