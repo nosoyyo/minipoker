@@ -13,7 +13,7 @@ from exceptions import OverBetError, InvalidBetError
 
 class Player():
 
-    STATES = ['ACTIVE','DEACTIVE',]
+    STATES = ['ACTIVE','DEACTIVE','FOLD']
     
     def __init__(self, game, name=None, is_AI=True,) -> None:
         self.logger = logging.getLogger('main.Player')
@@ -40,8 +40,9 @@ class Player():
 
         # transitions
         self.m = Machine(model=self, states=self.STATES, initial='DEACTIVE')
-        self.m.add_transition(trigger='Active', source='*', dest='ACTIVE')
-        self.m.add_transition(trigger='Deactive', source='*', dest='DEACTIVE')
+        self.m.add_transition(trigger='_active', source='*', dest='ACTIVE')
+        self.m.add_transition(trigger='_deactive', source='*', dest='DEACTIVE')
+        self.m.add_transition(trigger='_fold', source='*', dest='FOLD')
 
     def __repr__(self) -> str:
         info = f'<{self.NAME} 总盈亏${self.WEALTH} 筹码${self.CASH}>'
@@ -62,10 +63,8 @@ class Player():
     
     @property
     def INDEX(self) -> int:
-        #TODO: not in PLAYERS but in POSITIONS
         try:
-            players = [v for v in self.game.POSITIONS.__dict__.values()]
-            return players.index(self)
+            return self.game.PLAYERS.index(self)
         except:
             return None
 
@@ -85,8 +84,9 @@ class Player():
         if bet < self.game.SB or type(bet) is not int:
             raise InvalidBetError(f'cannot bet ${bet}!')
         elif self.CASH < bet:
-            self.logger.fatal(f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH} 了')
-            raise OverBetError()
+            err = f'{self.NAME}不能下注 ${bet}，筹码只剩 ${self.CASH}'
+            self.logger.fatal(err)
+            raise OverBetError(err)
         # max valid bet
         elif bet >= self.game.LASTBET:
             money = [p.CASH + p.LASTBET for p in self.game.PLAYERS if p is not self]
@@ -154,7 +154,7 @@ class Player():
             else:
                 comment = f'{random.choice(CORPUS.COMMENTALLIN)}{opponent.NAME}'
             
-            print(f'{self.NAME}：{comment}')
+            self.game.SCREEN.Update(f'{self.NAME}：{comment}', 'chat')
 
     @property
     def COMBO(self) -> Combo:
@@ -235,16 +235,23 @@ class Player():
             elif command == 'fold':
                 self.Fold()
             #DEBUG
-            elif command == ': $cash  :':
+            elif command == ':$cash':
                 self.CASH += self.game.BUYIN
-                self.logger.debug(f'出于DEBUG之合法目的，你的筹码增加${self.game.BUYIN}')
+                info = f'出于DEBUG之合法目的，你的筹码增加${self.game.BUYIN}'
+                self.game.SCREEN.Update(info, 'tech', title='DEBUG')
+                self.logger.debug(info)
                 self.Decide()
-            elif command == ':locals():':
+            elif command == ':locals':
                 self.logger.debug(f'locals() => {locals()}')
                 self.Decide()
-            elif command == ': status :':
+            elif command == ':status':
+                #TODO
                 print(self.game.STATUS)
                 self.Decide()
+            elif command == '下一局':
+                self.game.NewGame()
+            elif command == '离开':
+                self.game.Exit()
 
     @property
     def Q(self):
@@ -310,24 +317,12 @@ class Player():
                 #self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
                 self.game.POOL.Show()
                 self.game.SCREEN.Update(f'你的手牌：{self.HAND}', 'title')
-                if self.game._stage >= 2:
-                    print(f'当前桌面 {self.game.TABLE}')
-                    print(f'你的牌力 {self.COMBO}')
-                    print(f'当前听牌 {"#TODO"}')
 
-                rate = None
                 if self.CASH:
-                    rate = self.game.POOL.SUM/self.CASH
-                    if rate:
-                        print(f'你的筹码 ${self.CASH}，当前下注 {self.game.POOL.CURRENTMAX}\n\
-底池 ${self.game.POOL.SUM}，底池底池筹码比{rate:.2%}')
-                    else:
-                        print(f'你的筹码：${self.CASH}')
+                    self.Tech()
                     options = self.Options()
-                    #menu = TerminalMenu(options)
-                    menu = Menu(options, self)
+                    menu = Menu(options, self.game)
                     decision = menu.Show()
-                    #self.logger.debug(f'user input: {decision}')
                     self.Action(command=decision)
                 elif all([p.ALLIN for p in self.game.PLAYERS]):
                     self.game.SCREEN.Update(f'你已经 all in 了，看戏吧', 'title')
@@ -335,7 +330,7 @@ class Player():
                     self.game.SCREEN.Update(f'你已经 all in 了，看戏吧', 'title')
 
     def Options(self):
-        # options = ['allin','call','check','fold','raise',':$cash',':status',]
+        # options = ['allin','call','check','fold','raise']
         options = []
         if self.game.POOL.CURRENTMAX >= self.CASH:
             options = ['allin', 'fold',]
@@ -351,12 +346,22 @@ class Player():
                 else:
                     options = ['call','raise','allin','fold',]
         #debug
-        options.append(': $cash  :')
-        options.append(':locals():')
-        options.append(': status :')
+        options += Menu.DEBUG
 
         #self.logger.debug(f'options: {options}')
         return options
+
+    def Tech(self):
+        rate = self.game.POOL.SUM/self.CASH
+        if rate:
+            content = f'你的筹码 ${self.CASH}\n当前下注 {self.game.POOL.CURRENTMAX}\n\
+底池 ${self.game.POOL.SUM}\n底池筹码比{rate:.2%}\n'
+            if self.game._stage >= 2:
+                content += (f'你的牌力 {self.COMBO}\n')
+                content += (f'当前听牌 {"#TODO"}')
+        else:
+            content = f'你的筹码：${self.CASH}'
+        self.game.SCREEN.Update(content, 'tech', title='技术区')
 
     def Good(self):
         self.GOOD = True
@@ -424,6 +429,7 @@ class Player():
         self.logger.debug(f'[Player] {self.NAME} [action] Fold')
         self.Talk('fold')
         self.ONTABLE = False
+        self._fold() # for FSM
         ontable = '、'.join([p.NAME for p in self.game.PLAYERS])
         self.game.SCREEN.Update(f'{self.NAME}弃牌，玩家还剩{ontable}', 'title')
         #self.logger.debug(f'game.PLAYERS = {game.PLAYERS}')
@@ -440,6 +446,7 @@ class Player():
         self.ONTABLE = True
         self.BUYINTIMES += 1
         self.logger.info(f'{self.NAME}买入 ${self.game.BUYIN} 筹码，上桌')
+        self.game.SCREEN.Update(f'{self.NAME}买入 ${self.game.BUYIN}，上桌', 'title')
         self.Talk('buyin')
     
     def Bye(self):
@@ -452,15 +459,19 @@ class Player():
         self.logger.debug(f'self.game.PLAYERS {self.game.PLAYERS}')
 
         if self.IS_AI:
-            self.game.WORLD.Add(self)
-            self.Talk('bye')
+            if self.Q > 0.6: # may vary per personalities later
+                self.BuyIn()
+            else:
+                self.game.WORLD.Add(self)
+                self.SCREEN.Update(f'{self.NAME}输光所有筹码，黯然离场😢')
+                self.Talk('bye')
         else:
             print(f'筹码输光了，买入吗？')
-            options = ['对', '不了，到这吧']
-            menu = TerminalMenu(options)
+            options = [f'买入 ${self.game.BUIYIN}', '不了，到这吧']
+            options += Menu.DEBUG
+            menu = Menu(options, self.game)
             decision = menu.show()
-            decision = options[decision]
-            print(decision)
+
             if decision == '对':
                 self.BuyIn()
             else:

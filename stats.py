@@ -1,0 +1,1 @@
+# record all-time games, victories and money wins/loses for everyone

@@ -5,7 +5,7 @@ from rich.console import Console
 from exceptions import InvalidBetError
 
 
-logger = logging.getLogger('game.Pool.Add')
+logger = logging.getLogger('game.Pool')
 console = Console()
 
 
@@ -78,28 +78,37 @@ class Pool():
 
     def Show(self):
         t = f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n'
-        st = '祝您好运😝'
+        st = '等待发牌...'
         if len(self.game.TABLE.items):
             st = f'{self.game.TABLE}'
         table = Table()
         table.add_column("位置", justify="right", style="cyan", no_wrap=True)
         table.add_column("玩家", justify="right", style="cyan", no_wrap=True)
-        table.add_column("总盈亏", style="blue")
+        #table.add_column("总盈亏", style="blue")
         table.add_column("筹码", style="magenta")
         table.add_column("当前下注", justify="right", style="green")
         table.add_column("总下注", justify="right", style="green")
-        table.add_column("行动", justify="middle", style="white")
+        table.add_column("状态", justify="middle", style="white")
 
         c = self.CURRENT
         for p in c:
-            if p.state != 'ACTIVE':
+            if p.state == 'FOLD':
+                pos = f'[dim]{p.POSITION}'
+                name = f'[dim]{p.NAME}'
+            elif p.state != 'ACTIVE':
                 pos = p.POSITION
                 name = p.NAME
             else:
                 pos = f'[reverse]{p.POSITION}'
                 name = f'[reverse]{p.NAME}'
-            
-            table.add_row(pos, name, str(p.WEALTH), str(p.CASH), str(self.CURRENT[p]), str(self.pools[0][p]), p.LASTACTION)
+
+            table.add_row(pos,
+                          name,
+                          #str(p.WEALTH),
+                          str(p.CASH),
+                          str(self.CURRENT[p]),
+                          str(self.pools[0][p]),
+                          p.LASTACTION)
 
         self.game.SCREEN.Update(table, 'table', title=t, subtitle=st)
 

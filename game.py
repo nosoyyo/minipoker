@@ -1,6 +1,7 @@
 # __author__ = arslan
 # __date__ = 2021/10/11
 
+from re import M
 import sys
 import random
 import logging
@@ -11,6 +12,7 @@ from transitions import Machine
 from rich.console import Console
 from rich.table import Table as RichTable
 
+from menu import Menu
 from pool import Pool
 from world import World
 from exceptions import *
@@ -50,7 +52,21 @@ class Game():
         
         self._raw_table = []
         self.RAWCARDS = self.Shuffle()
-        self.CARDSDEALT = []
+
+    def Start(self):
+        options = ['♠️ START','♥️ OPTION','♣️ HELP','♦️ ABOUT']
+        menu = Menu(options, self, which='table')
+        decision = menu.Show()
+        if decision == '♠️ START':
+            self.NewGame()
+        elif decision == '♥️ OPTION':
+            pass
+        elif decision == '♣️ HELP':
+            pass
+        elif decision == '♦️ ABOUT':
+            self.SCREEN.Update('©2021 阿尔斯愣\n made with ♥️ in Guanghzou', 'table')
+            self.Start()
+
 
     @property
     def STATUS(self):
@@ -229,9 +245,9 @@ class Game():
                     self._stage += 1
                 else:
                     if p.ONTABLE:
-                        p.Active()
+                        p._active()
                         p.Decide()
-                        p.Deactive()
+                        p._deactive()
 
                 over = self.CheckState()
                 if over:
@@ -243,9 +259,9 @@ class Game():
                 self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
 
                 if not p.GOOD and p.ONTABLE:
-                    p.Active()
+                    p._active()
                     p.Decide()
-                    p.Deactive()
+                    p._deactive()
                     over = self.CheckState()
                     if over:
                         self.Summary()
@@ -276,15 +292,21 @@ class Game():
             if len(self.PLAYERS) > 1:
                 for p in self.PLAYERS:
                     p.ShowHand()
-                print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}')
+                content = f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}'
             else:
-                print(f'恭喜{self.WINNER.NAME}赢得全部底池 {self.POOL}')
+                content = f'恭喜{self.WINNER.NAME}赢得全部底池 {self.POOL}'
         else:
-            print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}')
-        #input('Press ENTER to continue...\n')
+            content = f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}'
+        self.SCREEN.Update(content, 'title')
+        self.WINNER.LASTACTION = f'赢得{self.POOL}'
+
+        options = ['下一局', '离开',] 
+        menu = Menu(options, self)
+        decision = menu.Show()
+        self.PLAYER.Action(command=decision)
 
         # losers say bye
-        for p in self.PLAYERS:
+        for p in self.POSITIONS.__dict__.values():
             if not p.CASH:
                 self.logger.debug(f'{p} got no cash({p.CASH}) and get off table')
                 self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
@@ -293,7 +315,7 @@ class Game():
                 p.Bye()
 
         #input('Press ENTER to continue...\n')
-        self.NewGame()
+        
 
     def CheckState(self):
         '''
