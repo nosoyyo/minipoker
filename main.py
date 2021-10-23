@@ -1,9 +1,15 @@
+__AUTHOR__ = "arslan"
+__EMAIL__ = "oyyoson@gmail.com"
+__COPYRIGHT__ = "Copyright © 2021 MSFC Studios. All rights reserved."
+__LICENSE__ = "MIT"
+__VERSION_INFO__ = (0, 0, -1, 'α')
+__VERSION__ = ".".join(map(str, __VERSION_INFO__))
+
 import random
 import logging
-from rich.logging import RichHandler
 from rich.traceback import install
 install(show_locals=True)
-from rich.live import Live
+from rich.logging import RichHandler
 
 from game import Game
 

@@ -7,13 +7,15 @@ import logging
 from rich import print
 from typing import List
 from thpoker.core import Table
+from transitions import Machine
 from rich.console import Console
 from rich.table import Table as RichTable
 
 from pool import Pool
-from exceptions import *
 from world import World
+from exceptions import *
 from player import Player
+from screen import Screen
 from utils import SortCombo
 from positions import Positions
 
@@ -24,10 +26,16 @@ class Game():
     suit_list = ['s', 'h', 'c', 'd']
     LASTBET = None
     LASTACTION = {}
+    STAGES = ['INIT','BLIND','PREFLOP','FLOP','TURN','RIVER','OVER']
+    SCREEN = Screen()
     
     def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.game')
         self.console = Console()
+        self.machine = Machine(model=self, states=self.STAGES, initial='INIT')
+        self.machine.add_ordered_transitions(loop=False)
+        self.machine.add_transition(trigger='Over', source='*', dest='OVER')
+        self.machine.add_transition(trigger='ReInit', source='*', dest='INIT')
 
         self.WORLD = World(self)
 
@@ -200,14 +208,13 @@ class Game():
             self._raw_table.append(self.RAWCARDS.pop())
             self.Actions()
         elif self._stage == 5:
+            self.Actions()
             self.Summary()
 
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
-        input('Press ENTER to continue...\n')
+        #input('Press ENTER to continue...\n')
 
     def Actions(self):
-        if self.TABLE:
-            self.logger.info(f'\n当前桌面 {self.TABLE}\n')
         self.logger.debug(f'本轮下注 {self.POOL.CURRENT}')
 
         if self._stage == 0:
@@ -222,23 +229,25 @@ class Game():
                     self._stage += 1
                 else:
                     if p.ONTABLE:
+                        p.Active()
                         p.Decide()
+                        p.Deactive()
 
                 over = self.CheckState()
                 if over:
                     self.Summary()
 
-                self.POOL.ShowCurrent()
+                #self.POOL.ShowCurrent()
         else:
             for p in self.PLAYERS:
                 self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
 
                 if not p.GOOD and p.ONTABLE:
+                    p.Active()
                     p.Decide()
+                    p.Deactive()
                     over = self.CheckState()
                     if over:
-                        for p in self.PLAYERS:
-                            p.ShowHand()
                         self.Summary()
 
         #check if all Players are GOOD or if game over
@@ -253,7 +262,7 @@ class Game():
                 self.logger.debug('game.POOL.Account() =>')
                 print(self.POOL)
                 self.logger.debug(self.POOL.Show())
-                input('\n\nPress ENTER to continue...\n')
+                #input('\n\nPress ENTER to continue...\n')
                 self._stage += 1
                 self.NewRound()
         else:
@@ -264,10 +273,15 @@ class Game():
     def Summary(self):
         self.POOL.Account()
         if self._stage > 1:
-            print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}')
+            if len(self.PLAYERS) > 1:
+                for p in self.PLAYERS:
+                    p.ShowHand()
+                print(f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}')
+            else:
+                print(f'恭喜{self.WINNER.NAME}赢得全部底池 {self.POOL}')
         else:
             print(f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}')
-        input('Press ENTER to continue...\n')
+        #input('Press ENTER to continue...\n')
 
         # losers say bye
         for p in self.PLAYERS:

@@ -1,3 +1,4 @@
 rich
+pynput
 thpoker
-simple-term-menu
+transitions
