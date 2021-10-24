@@ -53,6 +53,13 @@ class Game():
         self._raw_table = []
         self.RAWCARDS = self.Shuffle()
 
+    @property
+    def _check_repeated_cards(self):
+        flag = False
+        if len(self.CARDSDEALT) == len(set(self.CARDSDEALT)):
+            flag = True
+        return flag
+
     def Start(self):
         options = ['♠️ START','♥️ OPTION','♣️ HELP','♦️ ABOUT']
         menu = Menu(options, self, which='table')
@@ -60,11 +67,15 @@ class Game():
         if decision == '♠️ START':
             self.NewGame()
         elif decision == '♥️ OPTION':
-            pass
+            self.Start()
         elif decision == '♣️ HELP':
-            pass
+            self.Start()
         elif decision == '♦️ ABOUT':
-            self.SCREEN.Update('©2021 阿尔斯愣\n made with ♥️ in Guanghzou', 'table')
+            self.SCREEN.Update('©2021 阿尔斯愣\n MADE WITH ♥️  IN GZ', 'table', 'ABOUT')
+            self.Start()
+        else:
+            # DEBUG
+            self.PLAYER.Action(command=decision)
             self.Start()
 
 
@@ -201,6 +212,7 @@ class Game():
         self.ShowTable()
         ontable = '、'.join([p.NAME for p in self.PLAYERS])
         self.logger.info(f'当前玩家 {ontable}')
+        self.logger.debug(f'game._check_repeated_cards {self._check_repeated_cards()}')
 
         # re-init stuff if necessary
         self.LASTBET = 0
@@ -228,7 +240,6 @@ class Game():
             self.Summary()
 
         self.logger.debug(f'self.POOL.pools {self.POOL.pools}')
-        #input('Press ENTER to continue...\n')
 
     def Actions(self):
         self.logger.debug(f'本轮下注 {self.POOL.CURRENT}')
@@ -252,8 +263,6 @@ class Game():
                 over = self.CheckState()
                 if over:
                     self.Summary()
-
-                #self.POOL.ShowCurrent()
         else:
             for p in self.PLAYERS:
                 self.logger.debug(f'{p.NAME} COMBO: {p.COMBO}')
@@ -283,8 +292,6 @@ class Game():
                 self.NewRound()
         else:
             self.Actions()
-        
-        #input('Press ENTER to continue...\n')
 
     def Summary(self):
         self.POOL.Account()
@@ -300,11 +307,6 @@ class Game():
         self.SCREEN.Update(content, 'title')
         self.WINNER.LASTACTION = f'赢得{self.POOL}'
 
-        options = ['下一局', '离开',] 
-        menu = Menu(options, self)
-        decision = menu.Show()
-        self.PLAYER.Action(command=decision)
-
         # losers say bye
         for p in self.POSITIONS.__dict__.values():
             if not p.CASH:
@@ -312,10 +314,12 @@ class Game():
                 self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
                 self.logger.debug(f'game.PLAYERS {self.PLAYERS}')
                 self.logger.debug(f'p.ONTABLE {p.ONTABLE}')
-                p.Bye()
+                p.Bye()        
 
-        #input('Press ENTER to continue...\n')
-        
+        options = ['下一局', '离开',] 
+        menu = Menu(options, self)
+        decision = menu.Show()
+        self.PLAYER.Action(command=decision)
 
     def CheckState(self):
         '''

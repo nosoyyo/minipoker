@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 from game import Game
 
 logging.basicConfig(
-    level="WARNING",
+    level="DEBUG",
     format="'[%(levelname)s] %(asctime)s@%(name)s.%(funcName)s:\n%(message)s'",
     datefmt="[%X]",
     handlers=[RichHandler(rich_tracebacks=True)]

@@ -9,7 +9,7 @@ class Menu:
     def __init__(self, options: list, game, which='menu') -> None:
         self.TITLE = 'MENU'
         self.SUBTITLE = None
-        self.OPTIONS = options
+        self.OPTIONS = options + self.DEBUG
         self._choice = 0
         self.SCREEN = game.SCREEN
         self._t = Table(show_edge=False,show_header=False,show_lines=False)

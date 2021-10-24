@@ -234,6 +234,7 @@ class Player():
                 self.AllIn()
             elif command == 'fold':
                 self.Fold()
+
             #DEBUG
             elif command == ':$cash':
                 self.CASH += self.game.BUYIN
@@ -246,7 +247,7 @@ class Player():
                 self.Decide()
             elif command == ':status':
                 #TODO
-                print(self.game.STATUS)
+                self.game.SCREEN.Table(self.game.STATUS, 'DEBUG')
                 self.Decide()
             elif command == '下一局':
                 self.game.NewGame()
@@ -345,20 +346,18 @@ class Player():
                     options = ['check','raise','allin','fold',]
                 else:
                     options = ['call','raise','allin','fold',]
-        #debug
-        options += Menu.DEBUG
-
-        #self.logger.debug(f'options: {options}')
+        self.logger.debug(f'options: {options}')
         return options
 
     def Tech(self):
         rate = self.game.POOL.SUM/self.CASH
         if rate:
-            content = f'你的筹码 ${self.CASH}\n当前下注 {self.game.POOL.CURRENTMAX}\n\
+            content = f'当前下注 {self.game.POOL.CURRENTMAX}\n\
 底池 ${self.game.POOL.SUM}\n底池筹码比{rate:.2%}\n'
             if self.game._stage >= 2:
-                content += (f'你的牌力 {self.COMBO}\n')
-                content += (f'当前听牌 {"#TODO"}')
+                content += (f'你的牌力\n{self.COMBO}\n')
+                content += (f'当前听牌 {"#TODO"}\n')
+                content += (f'风险 {"#TODO"}')
         else:
             content = f'你的筹码：${self.CASH}'
         self.game.SCREEN.Update(content, 'tech', title='技术区')
@@ -468,7 +467,6 @@ class Player():
         else:
             print(f'筹码输光了，买入吗？')
             options = [f'买入 ${self.game.BUIYIN}', '不了，到这吧']
-            options += Menu.DEBUG
             menu = Menu(options, self.game)
             decision = menu.show()
 

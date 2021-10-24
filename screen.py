@@ -21,8 +21,8 @@ class Screen:
     def __init__(self) -> None:
         self.console = Console()
         self._chat = []
-        self.title = "[magenta]zhihu special edition"
-        self.subtitle = __VERSION__
+        self.title = 'MINIPOKER'
+        self.subtitle = "[magenta]zhihu special edition"
 
         # init title       
         self.LAYOUT['title'].size = 3
@@ -53,7 +53,10 @@ class Screen:
             time.sleep(0.4)
             live.update(self.LAYOUT)
 
-    def Chat(self, content):
+    def Table(self, content, title='TABLE', subtitle=None):
+        self.Update(content, 'table', title, subtitle)
+
+    def Chat(self, content, title='聊天室', subtitle='📱'):
         self._chat.append(content)
         if len(self._chat) > 6:
             self._chat.pop(0)
@@ -62,7 +65,7 @@ class Screen:
             lines += f'{self._chat[i]}\n'
         lines = lines[:-2]
         panel = Panel(lines)
-        self.Update(lines, 'chat', '聊天室', '📱')
+        self.Update(lines, 'chat', title, subtitle)
 
     def Update(self, content, which, title=None, subtitle=None):
         '''

@@ -7,7 +7,7 @@ from player import Player
 game = Game()
 
 
-class Test:
+class PlayerMachine:
 
     STATES = ['BUYIN','SB','BB','GOOD','CHECK','CALL','RAISE','ALLIN','FOLD','BYE',]
 
