@@ -18,7 +18,6 @@ from world import World
 from exceptions import *
 from player import Player
 from screen import Screen
-from utils import SortCombo
 from positions import Positions
 
 
@@ -78,7 +77,6 @@ class Game():
             self.PLAYER.Action(command=decision)
             self.Start()
 
-
     @property
     def STATUS(self):
         status = self.__dict__.copy()
@@ -114,9 +112,10 @@ class Game():
             self.PLAYER.BuyIn()
         else:
             self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
-            ps = [i for i in self.POSITIONS.__dict__.values() if i]
-            for player in ps:
-                player.ONTABLE = True
+            players = [i for i in self.POSITIONS.__dict__.values() if i]
+            for p in players:
+                p.ONTABLE = True
+                p._deactive()
             # rotate, redistribute SB/BB
             self.POSITIONS.Rotate()
             if self.POSITIONS.AVAILABLE:
@@ -126,7 +125,7 @@ class Game():
             self.logger.info(f'{self.POSITIONS.BB} 大盲')
 
         self.LASTBET = self.BB
-        self.WINNER = None
+        self.WINNERS = []
 
         self._raw_table = []
         self.CARDSDEALT = []
@@ -212,7 +211,7 @@ class Game():
         self.ShowTable()
         ontable = '、'.join([p.NAME for p in self.PLAYERS])
         self.logger.info(f'当前玩家 {ontable}')
-        self.logger.debug(f'game._check_repeated_cards {self._check_repeated_cards()}')
+        self.logger.debug(f'game._check_repeated_cards {self._check_repeated_cards}')
 
         # re-init stuff if necessary
         self.LASTBET = 0
@@ -258,7 +257,11 @@ class Game():
                     if p.ONTABLE:
                         p._active()
                         p.Decide()
-                        p._deactive()
+                        if p.state != 'FOLD':
+                            # player here might fold already
+                            # but `ONTABLE` was not refreshed so `_deactive()`
+                            # cannot be called
+                            p._deactive()
 
                 over = self.CheckState()
                 if over:
@@ -270,7 +273,9 @@ class Game():
                 if not p.GOOD and p.ONTABLE:
                     p._active()
                     p.Decide()
-                    p._deactive()
+                    if p.state != 'FOLD':
+                        p._deactive()
+
                     over = self.CheckState()
                     if over:
                         self.Summary()
@@ -295,17 +300,27 @@ class Game():
 
     def Summary(self):
         self.POOL.Account()
-        if self._stage > 1:
-            if len(self.PLAYERS) > 1:
+        if len(self.WINNERS) == 1:
+            WINNER = self.WINNERS[0]
+            share = self.POOL
+            # TODO update `ShowHand` to somewhere
+            if self._stage > 1:
                 for p in self.PLAYERS:
                     p.ShowHand()
-                content = f'恭喜{self.WINNER.NAME}以{self.WINNER.COMBO}赢得全部底池 {self.POOL}'
+                content = f'恭喜{WINNER.NAME}以{WINNER.COMBO}赢得全部底池 {share}'
             else:
-                content = f'恭喜{self.WINNER.NAME}赢得全部底池 {self.POOL}'
+                content = f'恭喜{WINNER.NAME}在翻牌前赢得全部底池 {share}'
         else:
-            content = f'恭喜{self.WINNER.NAME}在翻牌前赢得全部底池 {self.POOL}'
+            winners = '、'.join([p.NAME for p in self.WINNERS])
+            share = self.POOL / len(self.WINNERS)
+            content = f'恭喜{winners}平分底池 ${self.POOL}，每人获得 ${share}'
+            
         self.SCREEN.Update(content, 'title')
-        self.WINNER.LASTACTION = f'赢得{self.POOL}'
+
+        # update `Layout['table']`
+        for p in self.WINNERS:
+            p.LASTACTION = f'赢得 ${share}'
+        self.POOL.Show()
 
         # losers say bye
         for p in self.POSITIONS.__dict__.values():
@@ -316,10 +331,19 @@ class Game():
                 self.logger.debug(f'p.ONTABLE {p.ONTABLE}')
                 p.Bye()        
 
-        options = ['下一局', '离开',] 
-        menu = Menu(options, self)
-        decision = menu.Show()
-        self.PLAYER.Action(command=decision)
+        def _end_menu():
+            options = ['下一局', '离开',] 
+            menu = Menu(options, self)
+            decision = menu.Show()
+            if decision == '下一局':
+                self.NewGame()
+            elif decision == '离开':
+                self.Exit()
+            else:
+                self.PLAYER.Action(command=decision)
+                _end_menu()
+
+        _end_menu()
 
     def CheckState(self):
         '''
@@ -327,7 +351,7 @@ class Game():
         '''
         if len(self.PLAYERS) == 1:
             if len(self.POOL) == 1:
-                self.WINNER = self.PLAYERS[0]
+                self.WINNERS.append(self.PLAYERS[0])
                 self.OVER = True
             else:
                 #TODO side-pool situations
@@ -336,10 +360,11 @@ class Game():
         elif self._stage == 4:
             if len(self.POOL) == 1:
                 combos = [p.COMBO for p in self.PLAYERS]
-                combos = SortCombo(combos)
+                #combos = SortCombo(combos)
+                # multi winner situation considered, `SortCombo` not needed
                 for p in self.PLAYERS:
-                    if p.COMBO == combos[-1]:
-                        self.WINNER = p
+                    if p.COMBO == max(combos):
+                        self.WINNERS.append(p)
                 self.OVER = True
             else:
                 #TODO side-pool situations

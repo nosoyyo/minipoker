@@ -249,10 +249,6 @@ class Player():
                 #TODO
                 self.game.SCREEN.Table(self.game.STATUS, 'DEBUG')
                 self.Decide()
-            elif command == '下一局':
-                self.game.NewGame()
-            elif command == '离开':
-                self.game.Exit()
 
     @property
     def Q(self):

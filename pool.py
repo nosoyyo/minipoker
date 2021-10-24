@@ -73,8 +73,12 @@ class Pool():
                 # dont forget clear `CURRENT`
                 self.CURRENT[k] = 0
 
-        if self.game.WINNER:
-            self.game.WINNER.CASH += self.SUM
+        if len(self.game.WINNERS) == 1:
+            self.game.WINNERS[0].CASH += self.SUM
+        elif len(self.game.WINNERS) >= 1:
+            share = self.SUM / len(self.game.WINNERS)
+            for p in self.game.WINNERS:
+                p.CASH += share
 
     def Show(self):
         t = f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n'
