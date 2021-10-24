@@ -37,6 +37,7 @@ class Player():
         self.LASTBET = 0
         self.LASTACTION = None
         self.GOOD = False
+        self._total_bet = 0
 
         # transitions
         self.m = Machine(model=self, states=self.STATES, initial='DEACTIVE')
@@ -103,6 +104,7 @@ class Player():
     def _bet(self, bet):
         self.logger.info(f'{self} [Bet] {bet}')
         self.CASH -= bet
+        self._total_bet += bet
         self.game.POOL.Add(self, bet)
         self.game.LASTACTION = {self:bet}
         self.game.LASTBET = bet
@@ -402,8 +404,8 @@ class Player():
         self.logger.debug(f'{self.NAME}准备全下 ${bet}')
 
         # create side pool if necessary
-        if bet < self.game.POOL.CURRENTMAX:
-            self.SIDEPOOL = self.game.POOL.SidePool(self, bet)
+        #if bet < self.game.POOL.CURRENTMAX:
+        #    self.SIDEPOOL = self.game.POOL.SidePool(self, bet)
 
         self.Bet(bet)
         self.LASTACTION = 'All In'
@@ -462,7 +464,7 @@ class Player():
                 self.Talk('bye')
         else:
             print(f'筹码输光了，买入吗？')
-            options = [f'买入 ${self.game.BUIYIN}', '不了，到这吧']
+            options = [f'买入 ${self.game.BUYIN}', '不了，到这吧']
             menu = Menu(options, self.game)
             decision = menu.show()
 

@@ -91,6 +91,10 @@ class Game():
         return [p for p in ps if p.ONTABLE]
 
     @property
+    def ALLPLAYERS(self):
+        return [i for i in self.POSITIONS.__dict__.values() if i]
+
+    @property
     def CASHES(self):
         cashes = [p.CASH for p in self.PLAYERS]
         cashes.sort()
@@ -115,6 +119,7 @@ class Game():
             players = [i for i in self.POSITIONS.__dict__.values() if i]
             for p in players:
                 p.ONTABLE = True
+                self._total_bet = 0
                 p._deactive()
             # rotate, redistribute SB/BB
             self.POSITIONS.Rotate()
@@ -359,18 +364,28 @@ class Game():
                 self.OVER = True
         elif self._stage == 4:
             if len(self.POOL) == 1:
-                combos = [p.COMBO for p in self.PLAYERS]
-                #combos = SortCombo(combos)
-                # multi winner situation considered, `SortCombo` not needed
-                for p in self.PLAYERS:
-                    if p.COMBO == max(combos):
-                        self.WINNERS.append(p)
+                self.WINNERS = self.Elect()
                 self.OVER = True
             else:
                 #TODO side-pool situations
                 pass
                 self.OVER = True
         return self.OVER
-                
+
+    def Elect(self, players=None) -> list:
+        '''
+        Elect a winner from several given players
+        by comparing their `Combo`
+        '''
+        players = players or self.PLAYERS
+        result = []
+        combos = [p.COMBO for p in players]
+        #combos = SortCombo(combos)
+        # multi winner situation considered, `SortCombo` not needed
+        for p in players:
+            if p.COMBO == max(combos):
+                result.append(p)
+        return result
+
     def Exit(self):
         sys.exit('bye👋🏻')
