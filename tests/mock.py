@@ -8,7 +8,7 @@ class MockScreen(Screen):
         self.Chat = self.Update
 
     def Update(self, s, which=None, title=None, subtitle=None):
-        print(f's {s} which {which}')
+        print(f's="{s}" which="{which}"')
 
 
 class MockGame(Game):

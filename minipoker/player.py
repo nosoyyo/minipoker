@@ -38,6 +38,7 @@ class Player():
         self.LASTACTION = None
         self.GOOD = False
         self._total_bet = 0
+        #self._power = 0
 
         # transitions
         self.m = Machine(model=self, states=self.STATES, initial='DEACTIVE')
@@ -73,10 +74,6 @@ class Player():
     def HAND(self):
         string = '/'.join(self._raw_hand)
         return(Hand(string))
-
-    @property
-    def _power(self):
-        return self.PowerCheck()
 
     def Bet(self, bet):
         self.logger.debug(f'bet {bet} self.game.CASHES {self.game.CASHES}')
@@ -160,45 +157,54 @@ class Player():
     @property
     def COMBO(self) -> Combo:
         return Combo(hand=self.HAND, table=self.game.TABLE)
- 
+
+    @property
+    def _power(self):
+        return self.PowerCheck()
+
     def PowerCheck(self) -> int:
         '''
         :return: <int> range(0,100)
         '''
         hand = self.HAND
-
-        if not self.COMBO or not self.HAND:
-            return 0
-        else:
-            self._power += sum([c.weight.number for c in hand.items])
-
-        def CheckFlush():
-            if hand.type[-1] == 's':
-                self._power += 10
-        def CheckStraight():
-            c1, c2 = hand.items
-            if abs(c1.weight.number - c2.weight.number) < 5:
-                self._power += 10
-        def CheckPair():
-            if hand.is_pair:
-                self._power += 10
-        def CheckTPlus():
-            c1, c2 = hand.items 
-            if all([c.weight.number > 8 for c in hand.items]):
-                self._power += 10
-                self._power += sum([c.weight.number*0x5a24/10000 for c in hand.items])
+        _power = 0
+        basic = sum([c.weight.number for c in hand.items])
+        print(f'basic => {basic}')
+        _power += basic
 
         if self.game._stage < 2:
-            CheckFlush()
-            CheckStraight()
-            CheckPair()
-            CheckTPlus()
+            c1, c2 = hand.items
+            # CheckFlush
+            if hand.type[-1] == 's':
+                _power += 10
+            # CheckStraight
+            if abs(c1.weight.number - c2.weight.number) < 5:
+                _power += 10
+            # CheckPair
+            if hand.is_pair:
+                _power += 20
+            # CheckTPlus
+            if all([c.weight.number > 8 for c in hand.items]):
+                print('all T+ =>')
+                p1 = int((c1.weight.number-8) * random.random()*3)
+                p2 =  int((c2.weight.number-8) * random.random()*3)
+                p3 = int(sum([c.weight.number*0x3c18/10000 for c in hand.items]))
+                print(f'p1={p1} p2={p2} p3={p3}')
+                _power += p1 + p2 + p3
+            elif any([c.weight.number > 8 for c in hand.items]):
+                print('any T+ =>')
+                tplus = int(max(c1,c2).weight.number * random.random()*6)
+                print(tplus)
+                _power += tplus
+                
         else:
-            self._power = self.COMBO.type * int((self.Q + random.random()) * 10)
-            if self._power > 99:
-                self._power = 99
-        modifier = 0.8
-        return int(self._power * 0.8)
+            #_power = self.COMBO.type * int((self.Q + random.random()) * 10)
+            pass
+
+        if _power > 99:
+            _power = 99
+        #modifier = 0.8
+        return _power
     
     def ChooseOpponent(self):
         opponent = random.choice(self.game.PLAYERS)
@@ -274,15 +280,33 @@ class Player():
         '''
         return random.random()
 
+    def CountDown(self, limit=10):
+        t = int(random.random()*limit + 3)
+        if t > limit:
+            t = limit
+        assert t <= limit
+        mins, secs = divmod(t, 60) 
+        delta = limit - secs
+        while t: 
+            timer = f'{secs + delta:02d} {self.NAME}正在决策...'
+            debug = f'{self.HAND} => {self._power}'
+            timer += debug
+            self.game.SCREEN.Timer(timer)
+            #print(timer, end="\r") 
+            s = 0.8 + random.random()/10
+            time.sleep(0.9) 
+            t -= 1
+            delta -= 1
+
     def Decide(self):
-        self.PowerCheck() #TODO
         if self.IS_AI and self.ONTABLE:
+            self.PowerCheck()
             self.logger.debug(f'{self} 行动')
             self.logger.debug(f'{self.NAME}手牌：{self.HAND}')
             if not self.CASH:
                 self.logger.debug(f'{self.NAME}无筹码，跳过此轮')
             else:
-                self.game.SCREEN.Update(f'{self.NAME}正在决策...', 'title')
+                self.CountDown()
                 self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
 
                 power = self._power
@@ -329,6 +353,7 @@ class Player():
         else:
             # human player starts deciding from here
             if self.ONTABLE:
+                self.PowerCheck()
                 #self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
                 self.game.POOL.Show()
                 self.game.SCREEN.Update(f'你的手牌：{self.HAND}', 'title')
@@ -485,7 +510,7 @@ class Player():
             menu = Menu(options, self.game)
             decision = menu.Show()
 
-            if decision == '对':
+            if decision == f'买入 ${self.game.BUYIN}':
                 self.BuyIn()
             else:
                 self.game.Exit()

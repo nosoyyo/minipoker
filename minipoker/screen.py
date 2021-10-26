@@ -74,6 +74,9 @@ class Screen:
         panel = Panel(lines)
         self.Update(lines, 'chat', title, subtitle)
 
+    def Timer(self, timer: str):
+        self.Update(timer, 'title')
+
     def Update(self, content, which, title=None, subtitle=None):
         '''
         :which: `str` ['title', 'table', 'menu', 'chat',]

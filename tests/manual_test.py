@@ -27,8 +27,8 @@ combos.append(Combo(cards=Cards('As/Ts/8h/6c/2d')))
 # Test PowerCheck
 
 def TestPowerCheck():
-    from game import Game
-    from player import Player
+    from minipoker.game import Game
+    from minipoker.player import Player
 
     game = Game()
     game.Shuffle()
@@ -40,3 +40,5 @@ def TestPowerCheck():
     self = p
     p.PowerCheck()
     print(f'p.HAND {p.HAND}\n p._power {p._power}')
+
+    return {p.HAND:p._power}

@@ -150,7 +150,7 @@ class Pool():
                     prize += p._total_bet
                     p._total_bet = 0
                     _sum -= p._total_bet
-            WINNER.cash += prize
+            WINNER.CASH += prize
             if _sum - prize:
                 #assert sum([p._total_bet for p in positions]) == (sum - prize)
                 if self.SUM == (sum - prize):

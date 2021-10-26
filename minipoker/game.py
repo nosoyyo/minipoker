@@ -18,6 +18,7 @@ from minipoker.world import World
 from minipoker.exceptions import *
 from minipoker.player import Player
 from minipoker.screen import Screen
+from minipoker.utils import GetSeed
 from minipoker.positions import Positions
 
 
@@ -169,6 +170,7 @@ class Game():
     
     def Shuffle(self):
         RawCards = [x + y for x in self.num_list for y in self.suit_list]
+        random.seed(GetSeed())
         random.shuffle(RawCards)
         return RawCards
 
@@ -185,6 +187,7 @@ class Game():
             return self.RAWCARDS.pop()
      
         elif method == 'dynamic':
+            random.seed(GetSeed())
             self.logger.debug(f'dealing card with `dynamic` method')
             random.shuffle(self.num_list)
             random.shuffle(self.suit_list)
@@ -238,6 +241,7 @@ class Game():
 
     def Actions(self):
         self.logger.debug(f'本轮下注 {self.POOL.CURRENT}')
+        self.POOL.Show()
 
         if self._stage == 0:
             for p in self.PLAYERS:
