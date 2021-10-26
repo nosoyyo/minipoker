@@ -6,7 +6,8 @@ from rich.live import Live, Console
 from rich.table import Table
 from rich.layout import Layout, Panel
 
-from main import __VERSION__
+#from minipoker.main import __VERSION__
+__VERSION__ = '0.0.1α'
 
 
 class Screen:
@@ -53,8 +54,14 @@ class Screen:
             time.sleep(0.4)
             live.update(self.LAYOUT)
 
+    def Title(self, content, title='MINIPOKER', subtitle=None):
+        self.Update(content, 'title', title, subtitle)
+
     def Table(self, content, title='TABLE', subtitle=None):
         self.Update(content, 'table', title, subtitle)
+
+    def Menu(self, content, title='MENU', subtitle=None):
+        self.Update(content, 'menu', title, subtitle)
 
     def Chat(self, content, title='聊天室', subtitle='📱'):
         self._chat.append(content)

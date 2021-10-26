@@ -1,6 +1,6 @@
 import random
 
-from player import Player
+from minipoker.player import Player
 
 
 class World:

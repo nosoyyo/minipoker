@@ -22,6 +22,8 @@ for D, prize_B += 200 => prize_B == 500, _sum == 1000, D._total_bet == 500
 now pool.SUM == 1000, C & D get their $500 back each√
 
 ## semi-pseudo code here
+
+```
 prize = 0
 for p in players:
     if p._total_bet > winner._total_bet:
@@ -32,9 +34,12 @@ for p in players:
         prize += p._total_bet
         p._total_bet = 0
         _sum -= p._total_bet
+
 winner.cash += prize
+
 if sum - prize:
     assert sum[p._total_bet for p in all_players_no_matter_fold_or_not] == (sum - prize)
     for p in players:
         # get one's money left back
         p.cash += p._total_bet
+```

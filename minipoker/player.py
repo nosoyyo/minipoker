@@ -6,9 +6,9 @@ from transitions import Machine
 from thpoker.core import Hand, Combo
 from rich.table import Table as RichTable
 
-from menu import Menu
-from corpus import Corpus
-from exceptions import OverBetError, InvalidBetError
+from minipoker.menu import Menu
+from minipoker.corpus import Corpus
+from minipoker.exceptions import OverBetError, InvalidBetError
 
 
 class Player():
@@ -75,9 +75,8 @@ class Player():
         return(Hand(string))
 
     @property
-    def _hand_power(self):
-        for c in self._raw_hand:
-            pass
+    def _power(self):
+        return self.PowerCheck()
 
     def Bet(self, bet):
         self.logger.debug(f'bet {bet} self.game.CASHES {self.game.CASHES}')
@@ -162,28 +161,44 @@ class Player():
     def COMBO(self) -> Combo:
         return Combo(hand=self.HAND, table=self.game.TABLE)
  
-    def PowerCheck(self):
-        # TODO
-        if not self.COMBO:
-            pass
+    def PowerCheck(self) -> int:
+        '''
+        :return: <int> range(0,100)
+        '''
+        hand = self.HAND
+
+        if not self.COMBO or not self.HAND:
+            return 0
+        else:
+            self._power += sum([c.weight.number for c in hand.items])
 
         def CheckFlush():
-            pass
+            if hand.type[-1] == 's':
+                self._power += 10
         def CheckStraight():
-            pass
+            c1, c2 = hand.items
+            if abs(c1.weight.number - c2.weight.number) < 5:
+                self._power += 10
         def CheckPair():
-            pass
+            if hand.is_pair:
+                self._power += 10
         def CheckTPlus():
-            pass
+            c1, c2 = hand.items 
+            if all([c.weight.number > 8 for c in hand.items]):
+                self._power += 10
+                self._power += sum([c.weight.number*0x5a24/10000 for c in hand.items])
+
         if self.game._stage < 2:
-            flush = CheckFlush()
-            stra = CheckStraight()
-            pair = CheckPair()
-            tplus = CheckTPlus()
+            CheckFlush()
+            CheckStraight()
+            CheckPair()
+            CheckTPlus()
         else:
-            pass
-        power = int(random.random() * 100)
-        return power
+            self._power = self.COMBO.type * int((self.Q + random.random()) * 10)
+            if self._power > 99:
+                self._power = 99
+        modifier = 0.8
+        return int(self._power * 0.8)
     
     def ChooseOpponent(self):
         opponent = random.choice(self.game.PLAYERS)
@@ -260,6 +275,7 @@ class Player():
         return random.random()
 
     def Decide(self):
+        self.PowerCheck() #TODO
         if self.IS_AI and self.ONTABLE:
             self.logger.debug(f'{self} 行动')
             self.logger.debug(f'{self.NAME}手牌：{self.HAND}')
@@ -269,7 +285,7 @@ class Player():
                 self.game.SCREEN.Update(f'{self.NAME}正在决策...', 'title')
                 self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
 
-                power = self.PowerCheck() #TODO
+                power = self._power
                 self.logger.debug(f'Player.PowerCheck() => {power}')
 
                 lb = self.LASTBET
@@ -280,7 +296,7 @@ class Player():
                 self.logger.debug(f'game.LASTBET {glb}')
                 if not cmx:
                     # here is when self is 1st player to act
-                    # options: check, raise, allin, fold(extremly rare)
+                    # options: check, raise, allin, fold
                     if 46 <= power < 81:
                         # avoid `call` because nothing to call currently
                         q = self.Q
@@ -354,6 +370,7 @@ class Player():
 底池 ${self.game.POOL.SUM}\n底池筹码比{rate:.2%}\n'
             if self.game._stage >= 2:
                 content += (f'你的牌力\n{self.COMBO}\n')
+                content += (f'self._power {self._power}\n')
                 content += (f'当前听牌 {"#TODO"}\n')
                 content += (f'风险 {"#TODO"}')
         else:
@@ -456,17 +473,17 @@ class Player():
         self.logger.debug(f'self.game.PLAYERS {self.game.PLAYERS}')
 
         if self.IS_AI:
-            if self.Q > 0.6: # may vary per personalities later
+            if self.Q > 0.6: # may vary per personalities later # TODO
                 self.BuyIn()
             else:
                 self.game.WORLD.Add(self)
-                self.SCREEN.Update(f'{self.NAME}输光所有筹码，黯然离场😢')
+                self.game.SCREEN.Title(f'{self.NAME}输光所有筹码，黯然离场😢')
                 self.Talk('bye')
         else:
             print(f'筹码输光了，买入吗？')
             options = [f'买入 ${self.game.BUYIN}', '不了，到这吧']
             menu = Menu(options, self.game)
-            decision = menu.show()
+            decision = menu.Show()
 
             if decision == '对':
                 self.BuyIn()

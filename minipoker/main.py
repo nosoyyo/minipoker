@@ -12,7 +12,7 @@ from rich.traceback import install
 install(show_locals=True)
 from rich.logging import RichHandler
 
-from game import Game
+from minipoker.game import Game
 
 logging.basicConfig(
     level="DEBUG",

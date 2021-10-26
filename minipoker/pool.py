@@ -2,7 +2,7 @@ import logging
 from rich.table import Table
 from rich.console import Console
 
-from exceptions import InvalidBetError
+from minipoker.exceptions import InvalidBetError
 
 
 logger = logging.getLogger('game.Pool')
@@ -41,7 +41,7 @@ class Pool():
                 self.__dict__[p] = bet
 
     @property
-    def MAXTOTALBET(self):
+    def MAXTOTALBET(self) -> list:
         result = []
         tb = [p._total_bet for p in self.game.ALLPLAYERS]
         for p in self.game.ALLPLAYERS:
@@ -66,7 +66,7 @@ class Pool():
     def SUM(self):
         #return self.CURRENTSUM + sum(self.pools[0].values())
         _sum = sum(p._total_bet for p in self.game.ALLPLAYERS)
-        assert _sum == self.CURRENTSUM + sum(self.pools[0].values())
+        #assert _sum == self.CURRENTSUM + sum(self.pools[0].values())
         return _sum
 
     def Account(self):
@@ -87,7 +87,7 @@ class Pool():
 
         # end-game accounting
         if len(self.game.WINNERS) == 1:
-            if self.game.WINNERS[0]._total_bet < self.MAXTOTALBET:
+            if self.game.WINNERS[0]._total_bet < self.MAXTOTALBET[0]._total_bet:
                 self.SidePool('single')
             else:
                 self.game.WINNERS[0].CASH += self.SUM
@@ -137,7 +137,7 @@ class Pool():
         if condition == 'single':
             # after accounted this single winner
             # there still could be more players dividing the rest stake
-            WINNER = self.WINNERS[0]
+            WINNER = self.game.WINNERS[0]
             prize = 0
             for p in self.game.ALLPLAYERS:
                 if p._total_bet > WINNER._total_bet:

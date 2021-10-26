@@ -12,13 +12,13 @@ from transitions import Machine
 from rich.console import Console
 from rich.table import Table as RichTable
 
-from menu import Menu
-from pool import Pool
-from world import World
-from exceptions import *
-from player import Player
-from screen import Screen
-from positions import Positions
+from minipoker.menu import Menu
+from minipoker.pool import Pool
+from minipoker.world import World
+from minipoker.exceptions import *
+from minipoker.player import Player
+from minipoker.screen import Screen
+from minipoker.positions import Positions
 
 
 class Game():
@@ -81,8 +81,8 @@ class Game():
     def STATUS(self):
         status = self.__dict__.copy()
         for p in self.POSITIONS.__dict__.values():
-            status[p.NAME] = p.__dict__
-        status['POOL'] = self.POOL.__dict__
+            status[p.NAME] = p.__dict__.copy()
+        status['POOL'] = self.POOL.__dict__.copy()
         return status
 
     @property
@@ -100,13 +100,7 @@ class Game():
         cashes.sort()
         return cashes
 
-    def NewGame(self) -> None:
-
-        self.NUMOFGAMES += 1
-        print(f'\n第 {self.NUMOFGAMES} 局')
-        self.OVER = False
-        self.BLIND = False
-
+    def _init_table(self):
         # get on the table dudes
         if self.NUMOFGAMES == 1:
             for i in range(len(self.POSITIONS)-1):
@@ -126,14 +120,19 @@ class Game():
             if self.POSITIONS.AVAILABLE:
                 self.WORLD.pop().BuyIn()
 
-            self.logger.info(f'{self.POSITIONS.SB} 小盲')
-            self.logger.info(f'{self.POSITIONS.BB} 大盲')
+        # init or re-init POOL
+        self.POOL = Pool(self)
 
+    def _init_game(self):
+        self.NUMOFGAMES += 1
+        self.OVER = False
         self.LASTBET = self.BB
         self.WINNERS = []
-
+        self._stage = 0
         self._raw_table = []
         self.CARDSDEALT = []
+
+    def _init_deck(self):
         self.RAWCARDS = self.Shuffle()
 
         # init Player.HAND and game.TABLE
@@ -143,21 +142,14 @@ class Game():
             p._raw_hand.append(self.Deal())
             self.logger.debug(f'{p.NAME}拿到手牌{p.HAND}')
 
-        # init or re-init POOL
-        self.POOL = Pool(self)
+    def NewGame(self) -> None:
 
-        ''' 
-        0 - Init
-        1 - Preflop
-        2 - Flop
-        3 - Turn
-        4 - River
-        5 - Summary
-        '''
-        self._stage = 0 
+        self._init_game()
+        self._init_table()
+        self._init_deck()
 
         self.NewRound()
-
+ 
     @property
     def TABLE(self):
         string = '/'.join(self._raw_table)
@@ -234,7 +226,6 @@ class Game():
             self._raw_table.append(self.Deal())
             self._raw_table.append(self.Deal())
             self._raw_table.append(self.Deal())
-
             self.Actions()
         elif 2 < self._stage < 5:
             self._raw_table.append(self.RAWCARDS.pop())
@@ -264,10 +255,10 @@ class Game():
                         p.Decide()
                         if p.state != 'FOLD':
                             # player here might fold already
-                            # but `ONTABLE` was not refreshed so `_deactive()`
-                            # cannot be called
+                            # but `ONTABLE` was not refreshed
+                            # so `_deactive()` cannot be called
                             p._deactive()
-
+ 
                 over = self.CheckState()
                 if over:
                     self.Summary()
@@ -303,7 +294,7 @@ class Game():
         else:
             self.Actions()
 
-    def Summary(self):
+    def Summary(self, debug=False):
         self.POOL.Account()
         if len(self.WINNERS) == 1:
             WINNER = self.WINNERS[0]
@@ -324,31 +315,32 @@ class Game():
 
         # update `Layout['table']`
         for p in self.WINNERS:
-            p.LASTACTION = f'赢得 ${share}'
+            p.LASTACTION = f'赢得 {share}'
         self.POOL.Show()
 
-        # losers say bye
-        for p in self.POSITIONS.__dict__.values():
-            if not p.CASH:
-                self.logger.debug(f'{p} got no cash({p.CASH}) and get off table')
-                self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
-                self.logger.debug(f'game.PLAYERS {self.PLAYERS}')
-                self.logger.debug(f'p.ONTABLE {p.ONTABLE}')
-                p.Bye()        
+        if not debug:
+            # losers say bye
+            for p in self.POSITIONS.__dict__.values():
+                if not p.CASH:
+                    self.logger.debug(f'{p} got no cash({p.CASH}) and get off table')
+                    self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
+                    self.logger.debug(f'game.PLAYERS {self.PLAYERS}')
+                    self.logger.debug(f'p.ONTABLE {p.ONTABLE}')
+                    p.Bye()        
 
-        def _end_menu():
-            options = ['下一局', '离开',] 
-            menu = Menu(options, self)
-            decision = menu.Show()
-            if decision == '下一局':
-                self.NewGame()
-            elif decision == '离开':
-                self.Exit()
-            else:
-                self.PLAYER.Action(command=decision)
-                _end_menu()
+            def _end_menu():
+                options = ['下一局', '离开',] 
+                menu = Menu(options, self)
+                decision = menu.Show()
+                if decision == '下一局':
+                    self.NewGame()
+                elif decision == '离开':
+                    self.Exit()
+                else:
+                    self.PLAYER.Action(command=decision)
+                    _end_menu()
 
-        _end_menu()
+            _end_menu()
 
     def CheckState(self):
         '''
