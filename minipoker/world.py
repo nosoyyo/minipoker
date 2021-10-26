@@ -23,9 +23,9 @@ class World:
                     'Bob Dylan','John Lennon','George Harrison','Ringo Starr',
                     'Paul McCartney','Sting','黄家驹','崔健','谢强']
 
-    NETRED = ['特师',]
+    NETRED = ['特师','公孙玉龙','李诞','徐志胜','梁文道','窦文涛','李承鹏','李海鹏','连岳','银教授',]
 
-    def __init__(self, game, names=ZHIHU):
+    def __init__(self, game, names=BLV):
         random.shuffle(names)
         players = [Player(game, name=name) for name in names]
         random.shuffle(players)

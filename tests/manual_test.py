@@ -26,7 +26,7 @@ combos.append(Combo(cards=Cards('As/Ts/8h/6c/2d')))
 
 # Test PowerCheck
 
-def TestPowerCheck():
+def test_PowerCheck():
     from minipoker.game import Game
     from minipoker.player import Player
 
@@ -38,7 +38,26 @@ def TestPowerCheck():
     p._raw_hand.append(game.Deal())
     p._raw_hand.append(game.Deal())
     self = p
-    p.PowerCheck()
     print(f'p.HAND {p.HAND}\n p._power {p._power}')
 
     return {p.HAND:p._power}
+
+
+def test_COMBO():
+    from minipoker.game import Game
+    from minipoker.player import Player
+
+    game = Game()
+    game.Shuffle()
+    p = Player(game)
+    game.CARDSDEALT = []
+    game._stage = 1
+    p._raw_hand.append(game.Deal())
+    p._raw_hand.append(game.Deal())
+    print(f'p.HAND => {p.HAND}')
+    game._raw_table.append(game.Deal())
+    game._raw_table.append(game.Deal())
+    game._raw_table.append(game.Deal())
+    p.PowerCheck()
+    print(f'p.COMBO {p.COMBO}\n p._power {p._power}')
+

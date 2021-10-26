@@ -153,13 +153,13 @@ class Pool():
             WINNER.CASH += prize
             if _sum - prize:
                 #assert sum([p._total_bet for p in positions]) == (sum - prize)
-                if self.SUM == (sum - prize):
+                if self.SUM == (_sum - prize):
                     self.game.logger.debug(f'SidePool breakpoint #2 {locals()}')
                     for p in self.game.ALLPLAYERS:
                         p.CASH += p._total_bet
                 else:
                     # if not the situation above, decide new winners and recursion
-                    ps = self.PLAYERS
+                    ps = self.game.PLAYERS
                     # take your money and get lost
                     ps.remove(WINNER)
                     # decide new winner

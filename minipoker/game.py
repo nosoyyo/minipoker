@@ -67,6 +67,7 @@ class Game():
         if decision == '♠️ START':
             self.NewGame()
         elif decision == '♥️ OPTION':
+            options = []
             self.Start()
         elif decision == '♣️ HELP':
             self.Start()
