@@ -31,7 +31,7 @@ class Game():
     STAGES = ['INIT','BLIND','PREFLOP','FLOP','TURN','RIVER','OVER']
     SCREEN = Screen()
     
-    def __init__(self, name=None, n_AI=5, SB=5, buyin=600) -> None:
+    def __init__(self, name=None, world=None, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.game')
         self.console = Console()
         self.machine = Machine(model=self, states=self.STAGES, initial='INIT')
@@ -39,7 +39,7 @@ class Game():
         self.machine.add_transition(trigger='Over', source='*', dest='OVER')
         self.machine.add_transition(trigger='ReInit', source='*', dest='INIT')
 
-        self.WORLD = World(self)
+        self.WORLD = World(self, world)
 
         self.POSITIONS = Positions(n_AI)
         self.BUYIN = buyin

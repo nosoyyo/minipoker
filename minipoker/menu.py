@@ -1,5 +1,5 @@
 from rich.table import Table
-from pynput.keyboard import Key, Listener
+from pynput.keyboard import Key, Listener, GlobalHotKeys
 
 
 class Menu:
@@ -15,7 +15,13 @@ class Menu:
         self._choice = 0
         self._prev = None
         self.SCREEN = game.SCREEN
-        self._t = Table(show_edge=False,show_header=False,show_lines=False)
+        self._t = Table(
+            show_edge=False,
+            show_header=False,
+            show_lines=False,
+            )
+        self._t.add_column(justify='middle')
+        #self._t.padding = (10,10,10,10)
 
         for i in range(len(self.OPTIONS)):
             if type(self.OPTIONS[i]) is not dict:

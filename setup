@@ -1,0 +1,14 @@
+#!/bin/sh
+clear
+echo 下面开始安装高级扑克游戏
+
+sudo pip3 install -r requirements.txt
+
+em='#!'
+echo $em$(which python3)"\\n" | cat - play > temp1 && mv temp1 play
+chmod +x play
+
+clear
+
+echo 高级扑克游戏安装完毕👌
+echo 输入 './play' 开始游玩👍

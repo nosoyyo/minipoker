@@ -483,7 +483,7 @@ class Player():
         else:
             face = random.choice(self.FACES)
             #self.game.SCREEN.Update(self.FACES.index(face),'title')
-            content = f'微表情 {face}\n底  池 ${self.game.POOL.SUM}\n筹  码 ${self.CASH}'
+            content = f'微表情 [{self.NAME}]{face}\n底  池 ${self.game.POOL.SUM}\n筹  码 ${self.CASH}'
 
         self.game.SCREEN.Update(content, 'tech', title='技术区')
 

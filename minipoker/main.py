@@ -67,7 +67,7 @@ def show_cursor():
         sys.stdout.write("\033[?25h")
         sys.stdout.flush()
 
-def main(name):
+def main(name, world):
     # 获取标准输入的描述符
     fd = sys.stdin.fileno()
 
@@ -89,7 +89,7 @@ def main(name):
     # 隐藏光标
     hide_cursor()
 
-    game = Game(name=name)
+    game = Game(name=name, world=world)
     game.Start()
 
     # 回到之前设置
