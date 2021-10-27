@@ -174,7 +174,7 @@ class Pool():
             # simplest situation
             if len(set([p._total_bet for p in self.game.WINNERS])) == 1:
                 self.game.logger.debug(f'SidePool breakpoint #4 {locals()}')
-                share = self.SUM / len(self.game.WINNERS)
+                share = int(self.SUM / len(self.game.WINNERS))
                 for p in self.game.WINNERS:
                     p.CASH += share
             else:

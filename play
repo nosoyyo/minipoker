@@ -3,5 +3,10 @@
 # -*- coding: utf-8 -*-
 
 from minipoker.main import main
+from minipoker.splash import Splash
 
-main()
+
+sp = Splash()
+name = sp.name()
+
+main(name)

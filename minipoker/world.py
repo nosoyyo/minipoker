@@ -9,9 +9,9 @@ class World:
             '梁指','湖玛','张亮','心岩','芯宁','斗斗','开复','世奇','斯蒂法尼', ]
 
     BLV = ['云师','jimmy仔','修师','范师','西米','铁锤','Zakk','胡哥','六爷','莎翁',
-                '刘凯龙','蘑师','包大师','胡济民','胡姐',]
+                '刘凯龙','蘑师','包大师','胡济民','阿鬼',]
 
-    ENTRE = ['姆巴佩','哈兰德','马化腾','马斯克','Zuckerberg','乔布斯',]
+    ENTRE = ['周鸿祎','雷军','马化腾','马斯克','Zuckerberg','乔布斯','王兴','王小川','贝索斯']
 
     FTB = ['Mbappé','Haaland','Ronaldo','Messi','Zidane','Pelé','Neymar',
                     'Maradona','Rooney','Pogba','Benzema','Modric','Ramos','Bale',]

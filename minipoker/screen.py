@@ -1,5 +1,6 @@
-import random
+import os
 import time
+import random
 
 from rich import print
 from rich.live import Live, Console
@@ -20,10 +21,11 @@ class Screen:
         )
 
     def __init__(self) -> None:
+        os.system("clear")
         self.console = Console()
         self._chat = []
         self.title = 'MINIPOKER'
-        self.subtitle = "[magenta]zhihu special edition"
+        self.subtitle = "[red]BLV GZ"
 
         # init title       
         self.LAYOUT['title'].size = 3
@@ -44,15 +46,16 @@ class Screen:
         self.LAYOUT["tech"].update(Panel('test', title='技术区', subtitle=None))
         self.LAYOUT["chat"].update(Panel('test', title='CHAT', subtitle='📱'))
     
-        with Live(
-                self.LAYOUT,
-                refresh_per_second=4,
-                screen=True,
-                transient=True,
-                ) as live:
-            #for _ in range(40):
-            time.sleep(0.4)
-            live.update(self.LAYOUT)
+#        with Live(
+#                self.LAYOUT,
+#                refresh_per_second=4,
+#                screen=True,
+#                transient=True,
+#                ) as live:
+#            #for _ in range(40):
+#            time.sleep(0.4)
+#            os.system("clear")
+#            live.update(self.LAYOUT)
 
     def Title(self, content, title='MINIPOKER', subtitle=None):
         self.Update(content, 'title', title, subtitle)
@@ -71,7 +74,7 @@ class Screen:
         for i in range(len(self._chat)):
             lines += f'{self._chat[i]}\n'
         lines = lines[:-2]
-        panel = Panel(lines)
+        #panel = Panel(lines)
         self.Update(lines, 'chat', title, subtitle)
 
     def Timer(self, timer: str):
@@ -81,6 +84,7 @@ class Screen:
         '''
         :which: `str` ['title', 'table', 'menu', 'chat',]
         '''
+        os.system("clear")
         title = title or self.title
         subtitle = subtitle or self.subtitle
         self.LAYOUT[which].update(Panel(content, title=title, subtitle=subtitle))

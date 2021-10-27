@@ -31,7 +31,7 @@ class Game():
     STAGES = ['INIT','BLIND','PREFLOP','FLOP','TURN','RIVER','OVER']
     SCREEN = Screen()
     
-    def __init__(self, n_AI=5, SB=5, buyin=600) -> None:
+    def __init__(self, name=None, n_AI=5, SB=5, buyin=600) -> None:
         self.logger = logging.getLogger('main.game')
         self.console = Console()
         self.machine = Machine(model=self, states=self.STAGES, initial='INIT')
@@ -45,7 +45,9 @@ class Game():
         self.BUYIN = buyin
         self.NUMOFGAMES = 0
 
-        self.PLAYER = Player(self, is_AI=False)
+        #human player
+        name = name or 'arslan'
+        self.PLAYER = Player(self, name=name, is_AI=False)
 
         self.SB = SB
         self.BB = SB*2
@@ -291,9 +293,7 @@ class Game():
                 # accounting
                 self.POOL.Account()
                 self.logger.debug('game.POOL.Account() =>')
-                print(self.POOL)
                 self.logger.debug(self.POOL.Show())
-                #input('\n\nPress ENTER to continue...\n')
                 self._stage += 1
                 self.NewRound()
         else:
@@ -313,8 +313,8 @@ class Game():
                 content = f'恭喜{WINNER.NAME}在翻牌前赢得全部底池 {share}'
         else:
             winners = '、'.join([p.NAME for p in self.WINNERS])
-            share = self.POOL / len(self.WINNERS)
-            content = f'恭喜{winners}平分底池 ${self.POOL}，每人获得 ${share}'
+            share = int(self.POOL.SUM / len(self.WINNERS))
+            content = f'恭喜{winners}平分底池 {self.POOL}，每人获得 ${share}'
             
         self.SCREEN.Update(content, 'title')
 
@@ -331,7 +331,10 @@ class Game():
                     self.logger.debug(f'game.POSITIONS {self.POSITIONS}')
                     self.logger.debug(f'game.PLAYERS {self.PLAYERS}')
                     self.logger.debug(f'p.ONTABLE {p.ONTABLE}')
-                    p.Bye()        
+                    p.Bye()
+                #clean up the pool
+                if p._total_bet:
+                    p._total_bet = 0
 
             def _end_menu():
                 options = ['下一局', '离开',] 

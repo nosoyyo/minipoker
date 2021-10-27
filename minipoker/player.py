@@ -15,6 +15,9 @@ from minipoker.utils import GetSeed
 class Player():
 
     STATES = ['ACTIVE','DEACTIVE','FOLD']
+    FACES = '😀😃😄😁😆😅😂🤣\U0001f972☺️😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎\U0001f978🤩🥳😏😒😞😔😟😕🙁☹️😣😖😫😩\
+🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👹👺🤡💩👻💀👽🤖🎃😺😸😹😻\
+😼😽🙀😿😾🙇‍♀️🙇🙇‍♂️💁‍♀️💁💁‍♂️🙅‍♀️🙅🙅‍♂️🙆‍♀️🙆🙆‍♂️🙋‍♀️🙋🙋‍♂️🧏‍♀️🧏🧏‍♂️🤦‍♀️🤦🤦‍♂️🤷‍♀️🤷🤷‍♂️🙎‍♀️🙎🙎‍♂️🙍‍♀️🙍🙍‍♂️💅🤳'
 
     # sample personalities here
     PERSONALITIES = ['conservative','normal','progressive']
@@ -103,6 +106,7 @@ class Player():
             self._bet(bet)
     
     def _bet(self, bet):
+        bet = int(bet)
         self.logger.info(f'{self} [Bet] {bet}')
         self.CASH -= bet
         self._total_bet += bet
@@ -368,8 +372,12 @@ class Player():
             delta -= 1
 
     def Decide(self):
+        print(chr(27)+'[2j')
+        print('\033c')
+        print('\x1bc')
         if self.IS_AI and self.ONTABLE:
             self.game.POOL.Show()
+            self.Tech()
             self.logger.debug(f'{self} 行动')
             self.logger.debug(f'{self.NAME}手牌：{self.HAND}')
             if not self.CASH:
@@ -431,7 +439,7 @@ class Player():
                 self.game.SCREEN.Update(f'你的手牌：{self.HAND}', 'title')
 
                 if self.CASH:
-                    self.Tech()
+                    self.Tech(AI=False)
                     options = self.Options()
                     menu = Menu(options, self.game)
                     decision = menu.Show()
@@ -460,17 +468,23 @@ class Player():
         self.logger.debug(f'options: {options}')
         return options
 
-    def Tech(self):
-        rate = self.game.POOL.SUM/self.CASH
-        if rate:
-            content = f'底池 ${self.game.POOL.SUM}\n底池筹码比{rate:.2%}\n'
-            if self.game._stage >= 2:
-                content += (f'你的牌力\n{self.COMBO}\n')
-                content += (f'self._power {self._power}\n')
-                content += (f'当前听牌 {"#TODO"}\n')
-                content += (f'风险 {"#TODO"}')
+    def Tech(self, AI=True):
+        content = ''
+        if not AI:
+            rate = self.game.POOL.SUM/self.CASH
+            if rate:
+                content = f'底池 ${self.game.POOL.SUM}\n底池筹码比{rate:.2%}\n'
+                if self.game._stage >= 2:
+                    content += (f'你的牌力\n{self.COMBO}\n')
+                    #content += (f'self._power {self._power}\n')
+                    content += (f'当前听牌 {"#TODO"}\n')
+                    content += (f'风险 {"#TODO"}')
+            else:
+                content = f'你的筹码：${self.CASH}'
         else:
-            content = f'你的筹码：${self.CASH}'
+            face = random.choice(self.FACES)
+            content = f'微表情 {face}\n底  池 ${self.game.POOL.SUM}\n筹  码 ${self.CASH}'
+
         self.game.SCREEN.Update(content, 'tech', title='技术区')
 
     def Good(self):
@@ -548,6 +562,7 @@ class Player():
     def ShowHand(self):
         self.logger.debug(f'[Player] {self.NAME} [action] ShowHand')
         self.logger.info(f'{self} 手牌 {self.HAND}')
+        self.game.SCREEN.Update(f'{self} 手牌 {self.HAND}', 'tech')
 
     def BuyIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] BuyIn')
