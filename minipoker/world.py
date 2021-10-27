@@ -25,7 +25,7 @@ class World:
 
     NETRED = ['特师','公孙玉龙','李诞','徐志胜','梁文道','窦文涛','李承鹏','李海鹏','连岳','银教授',]
 
-    def __init__(self, game, names=BLV):
+    def __init__(self, game, names=ZHIHU):
         random.shuffle(names)
         players = [Player(game, name=name) for name in names]
         random.shuffle(players)

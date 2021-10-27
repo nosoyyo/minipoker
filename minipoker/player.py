@@ -15,9 +15,9 @@ from minipoker.utils import GetSeed
 class Player():
 
     STATES = ['ACTIVE','DEACTIVE','FOLD']
-    FACES = '😀😃😄😁😆😅😂🤣\U0001f972☺️😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎\U0001f978🤩🥳😏😒😞😔😟😕🙁☹️😣😖😫😩\
+    FACES = '😀😃😄😁😆😅😂🤣😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🤩🥳😏😒😞😔😟😕🙁😣😖😫😩\
 🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👹👺🤡💩👻💀👽🤖🎃😺😸😹😻\
-😼😽🙀😿😾🙇‍♀️🙇🙇‍♂️💁‍♀️💁💁‍♂️🙅‍♀️🙅🙅‍♂️🙆‍♀️🙆🙆‍♂️🙋‍♀️🙋🙋‍♂️🧏‍♀️🧏🧏‍♂️🤦‍♀️🤦🤦‍♂️🤷‍♀️🤷🤷‍♂️🙎‍♀️🙎🙎‍♂️🙍‍♀️🙍🙍‍♂️💅🤳'
+😼😽🙀😿😾'
 
     # sample personalities here
     PERSONALITIES = ['conservative','normal','progressive']
@@ -46,7 +46,6 @@ class Player():
         self.LASTACTION = None
         self.GOOD = False
         self._total_bet = 0
-        #self._power = 0
 
         # transitions
         self.m = Machine(model=self, states=self.STATES, initial='DEACTIVE')
@@ -178,7 +177,7 @@ class Player():
         hand = self.HAND
         _power = 0
         basic = sum([c.weight.number for c in hand.items])
-        print(f'basic => {basic}')
+        #print(f'basic => {basic}')
         _power += basic
 
         if self.game._stage < 2:
@@ -187,7 +186,7 @@ class Player():
             if hand.type[-1] == 's':
                 random.seed(GetSeed())
                 flush = int(random.random()*20 + 10)
-                print(f'flush => {flush}')
+                ##print(f'flush => {flush}')
                 _power += flush
             # CheckStraight
             if abs(c1.weight.number - c2.weight.number) < 5:
@@ -201,21 +200,21 @@ class Player():
                 p1 = int((c1.weight.number-8) * random.random()*3)
                 p2 =  int((c2.weight.number-8) * random.random()*3)
                 p3 = int(sum([c.weight.number*0x3c18/10000 for c in hand.items]))
-                print(f'p1={p1} p2={p2} p3={p3}')
+                #print(f'p1={p1} p2={p2} p3={p3}')
                 _power += p1 + p2 + p3
             elif any([c.weight.number > 8 for c in hand.items]):
-                print('any T+ =>')
+                #print('any T+ =>')
                 tplus = int(max(c1,c2).weight.number * random.random()*10)
                 if tplus > 20:
                     tplus = 20
                 elif tplus < 0:
                     tplus = 10
-                print(f'tplus => {tplus}')
+                #print(f'tplus => {tplus}')
                 if min(c1,c2).weight.number < 7:
                     tminor = int(min(c1,c2).weight.number * random.random()*10)
                     if tminor > 10:
                         tminor = 10
-                    print(f'tminor => {tminor}')
+                    #print(f'tminor => {tminor}')
                     _power -= tminor
 
                 _power += tplus
@@ -243,7 +242,7 @@ class Player():
             elif self.COMBO.type == 9:
                 factor = 10
             basic *= factor
-            print(f'basic *= factor => {basic}')
+            #print(f'basic *= factor => {basic}')
 
             #CheckDrawing #TODO
             f = set([c.suit.number for c in  self.COMBO.cards.items])
@@ -483,6 +482,7 @@ class Player():
                 content = f'你的筹码：${self.CASH}'
         else:
             face = random.choice(self.FACES)
+            #self.game.SCREEN.Update(self.FACES.index(face),'title')
             content = f'微表情 {face}\n底  池 ${self.game.POOL.SUM}\n筹  码 ${self.CASH}'
 
         self.game.SCREEN.Update(content, 'tech', title='技术区')
@@ -562,7 +562,7 @@ class Player():
     def ShowHand(self):
         self.logger.debug(f'[Player] {self.NAME} [action] ShowHand')
         self.logger.info(f'{self} 手牌 {self.HAND}')
-        self.game.SCREEN.Update(f'{self} 手牌 {self.HAND}', 'tech')
+        self.game.SCREEN.Update(f'{self} 手牌 {self.HAND}\n牌力 {self.COMBO}', 'tech')
 
     def BuyIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] BuyIn')
@@ -584,8 +584,9 @@ class Player():
         self.logger.debug(f'self.game.PLAYERS {self.game.PLAYERS}')
 
         if self.IS_AI:
-            if self.Q > 0.6: # may vary per personalities later # TODO
+            if self.Q > 0.5: # may vary per personalities later # TODO
                 self.BuyIn()
+                self.Talk('buyin')
             else:
                 self.game.WORLD.Add(self)
                 self.game.SCREEN.Title(f'{self.NAME}输光所有筹码，黯然离场😢')

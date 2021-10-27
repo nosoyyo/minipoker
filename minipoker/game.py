@@ -1,7 +1,7 @@
 # __author__ = arslan
 # __date__ = 2021/10/11
 
-from re import M
+import os
 import sys
 import random
 import logging
@@ -306,12 +306,17 @@ class Game():
             share = self.POOL
             # TODO update `ShowHand` to somewhere
             if self._stage > 1:
-                for p in self.PLAYERS:
-                    p.ShowHand()
+                if len(self.PLAYERS) > 1:
+                    for p in self.PLAYERS:
+                        p.ShowHand()
                 content = f'恭喜{WINNER.NAME}以{WINNER.COMBO}赢得全部底池 {share}'
             else:
                 content = f'恭喜{WINNER.NAME}在翻牌前赢得全部底池 {share}'
         else:
+            showhand = ''
+            for p in self.PLAYERS:
+                showhand += f'{self} 手牌 {self.HAND}\n牌力 {self.COMBO}\n'
+            self.game.SCREEN.Update(showhand, 'tech','开牌')
             winners = '、'.join([p.NAME for p in self.WINNERS])
             share = int(self.POOL.SUM / len(self.WINNERS))
             content = f'恭喜{winners}平分底池 {self.POOL}，每人获得 ${share}'
@@ -388,4 +393,10 @@ class Game():
         return result
 
     def Exit(self):
-        sys.exit('bye👋🏻')
+        os.system('clear')
+        bye = '\n\n\n\n\n\n\n\n\n'
+        bye += str.center('have a good day.', 80)
+        bye += '\n\n\n\n'
+        bye += str.center('bye👋🏻', 80)
+        bye += '\n\n\n\n\n\n\n\n\n'
+        sys.exit(bye)
