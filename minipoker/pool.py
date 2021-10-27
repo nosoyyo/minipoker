@@ -2,7 +2,7 @@ import logging
 from rich.table import Table
 from rich.console import Console
 
-from exceptions import InvalidBetError
+from minipoker.exceptions import InvalidBetError
 
 
 logger = logging.getLogger('game.Pool')
@@ -13,14 +13,13 @@ class Pool():
 
     def __init__(self, game) -> None:
         self.game = game
-        players = [i for i in game.POSITIONS.__dict__.values() if i]
         pool = {}
-        for p in players:
+        for p in self.game.ALLPLAYERS:
             pool.update({p : 0})
         self.pools = [pool]
 
         self.CURRENT = {}
-        for p in players:
+        for p in self.game.ALLPLAYERS:
             self.CURRENT.update({ p : 0 })
 
     def __repr__(self):
@@ -42,6 +41,15 @@ class Pool():
                 self.__dict__[p] = bet
 
     @property
+    def MAXTOTALBET(self) -> list:
+        result = []
+        tb = [p._total_bet for p in self.game.ALLPLAYERS]
+        for p in self.game.ALLPLAYERS:
+            if p._total_bet == max(tb):
+                result.append(p)
+        return result
+
+    @property
     def CURRENTMAX(self):
         sequence = [v for v in self.CURRENT.values() if v] or [0]
         return max(sequence)
@@ -56,7 +64,10 @@ class Pool():
 
     @property
     def SUM(self):
-        return self.CURRENTSUM + sum(self.pools[0].values())
+        #return self.CURRENTSUM + sum(self.pools[0].values())
+        _sum = sum(p._total_bet for p in self.game.ALLPLAYERS)
+        #assert _sum == self.CURRENTSUM + sum(self.pools[0].values())
+        return _sum
 
     def Account(self):
         '''
@@ -66,6 +77,7 @@ class Pool():
 
         side-pool: when an all-in player can't match a previously bet
         '''
+        # normally
         for k in self.CURRENT.keys():
             if self.CURRENT[k]:
                 v = self.pools[0][k] + self.CURRENT[k]
@@ -73,8 +85,14 @@ class Pool():
                 # dont forget clear `CURRENT`
                 self.CURRENT[k] = 0
 
-        if self.game.WINNER:
-            self.game.WINNER.CASH += self.SUM
+        # end-game accounting
+        if len(self.game.WINNERS) == 1:
+            if self.game.WINNERS[0]._total_bet < self.MAXTOTALBET[0]._total_bet:
+                self.SidePool('single')
+            else:
+                self.game.WINNERS[0].CASH += self.SUM
+        elif len(self.game.WINNERS) >= 1:
+            self.SidePool('multi')
 
     def Show(self):
         t = f'\n第 {self.game.NUMOFGAMES} 局 {self.game.STAGE}\n'
@@ -113,5 +131,51 @@ class Pool():
         self.game.SCREEN.Update(table, 'table', title=t, subtitle=st)
 
 
-    def SidePool(self, p, bet) -> None:
-        pass
+    def SidePool(self, condition) -> None:
+        # so it's time to divide self.SUM
+        _sum = self.SUM
+        if condition == 'single':
+            # after accounted this single winner
+            # there still could be more players dividing the rest stake
+            WINNER = self.game.WINNERS[0]
+            prize = 0
+            for p in self.game.ALLPLAYERS:
+                if p._total_bet > WINNER._total_bet:
+                    self.game.logger.debug(f'SidePool breakpoint #0 {locals()}')
+                    prize += WINNER._total_bet
+                    p._total_bet -= WINNER._total_bet
+                    _sum -= WINNER._total_bet
+                else:
+                    self.game.logger.debug(f'SidePool breakpoint #1 {locals()}')
+                    prize += p._total_bet
+                    p._total_bet = 0
+                    _sum -= p._total_bet
+            WINNER.CASH += prize
+            if _sum - prize:
+                #assert sum([p._total_bet for p in positions]) == (sum - prize)
+                if self.SUM == (_sum - prize):
+                    self.game.logger.debug(f'SidePool breakpoint #2 {locals()}')
+                    for p in self.game.ALLPLAYERS:
+                        p.CASH += p._total_bet
+                else:
+                    # if not the situation above, decide new winners and recursion
+                    ps = self.game.PLAYERS
+                    # take your money and get lost
+                    ps.remove(WINNER)
+                    # decide new winner
+                    WINNERS = self.game.Elect(ps)
+                    self.game.logger.debug(f'SidePool breakpoint #3 {locals()}')
+                    if len(WINNERS) == 1:
+                        self.SidePool('single')
+                    else:
+                        self.SidePool('multi')
+
+        elif condition == 'multi':
+            # simplest situation
+            if len(set([p._total_bet for p in self.game.WINNERS])) == 1:
+                self.game.logger.debug(f'SidePool breakpoint #4 {locals()}')
+                share = int(self.SUM / len(self.game.WINNERS))
+                for p in self.game.WINNERS:
+                    p.CASH += share
+            else:
+                pass

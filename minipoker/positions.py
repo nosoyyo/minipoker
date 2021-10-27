@@ -1,7 +1,7 @@
 import random
 import logging
 
-from exceptions import *
+from minipoker.exceptions import *
 
 
 logger = logging.getLogger('game.Positions.Add')

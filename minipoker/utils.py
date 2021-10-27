@@ -1,4 +1,5 @@
-from typing import List
+import time 
+import random
 from thpoker.core import Table
 
 
@@ -12,7 +13,7 @@ def ShowHand(slashstring) -> Table:
     return(Table(string[:-1]))
 
 
-def SortCombo(combos: list) -> List:
+def SortCombo(combos: list) -> list:
     '''
     :return: player index in game.PLAYERS
     '''
@@ -22,4 +23,13 @@ def SortCombo(combos: list) -> List:
             if combos[j] > combos[j+1]:
                 combos[j], combos[j+1] = combos[j+1], combos[j]
     return combos
-    
+
+def GetSeed():
+    import random
+    _seed = 0
+    levels = int(random.random().__str__()[-3:])
+    for i in range(levels):
+        random.seed(_seed)
+        _seed += random.random()
+    _seed = int(_seed.real.__str__()[-8:])
+    return _seed

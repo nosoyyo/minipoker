@@ -6,14 +6,21 @@ from transitions import Machine
 from thpoker.core import Hand, Combo
 from rich.table import Table as RichTable
 
-from menu import Menu
-from corpus import Corpus
-from exceptions import OverBetError, InvalidBetError
+from minipoker.menu import Menu
+from minipoker.corpus import Corpus
+from minipoker.exceptions import OverBetError, InvalidBetError
+from minipoker.utils import GetSeed
 
 
 class Player():
 
     STATES = ['ACTIVE','DEACTIVE','FOLD']
+    FACES = '😀😃😄😁😆😅😂🤣😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🤩🥳😏😒😞😔😟😕🙁😣😖😫😩\
+🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👹👺🤡💩👻💀👽🤖🎃😺😸😹😻\
+😼😽🙀😿😾'
+
+    # sample personalities here
+    PERSONALITIES = ['conservative','normal','progressive']
     
     def __init__(self, game, name=None, is_AI=True,) -> None:
         self.logger = logging.getLogger('main.Player')
@@ -27,6 +34,7 @@ class Player():
         self.CORPUS = Corpus(self)
 
         self.IS_AI = is_AI
+        self.PERSONALITY = random.choice(self.PERSONALITIES)
         self.POSITION = None
         self.SB = False
         self.BB = False
@@ -37,6 +45,7 @@ class Player():
         self.LASTBET = 0
         self.LASTACTION = None
         self.GOOD = False
+        self._total_bet = 0
 
         # transitions
         self.m = Machine(model=self, states=self.STATES, initial='DEACTIVE')
@@ -73,11 +82,6 @@ class Player():
         string = '/'.join(self._raw_hand)
         return(Hand(string))
 
-    @property
-    def _hand_power(self):
-        for c in self._raw_hand:
-            pass
-
     def Bet(self, bet):
         self.logger.debug(f'bet {bet} self.game.CASHES {self.game.CASHES}')
 
@@ -101,8 +105,10 @@ class Player():
             self._bet(bet)
     
     def _bet(self, bet):
+        bet = int(bet)
         self.logger.info(f'{self} [Bet] {bet}')
         self.CASH -= bet
+        self._total_bet += bet
         self.game.POOL.Add(self, bet)
         self.game.LASTACTION = {self:bet}
         self.game.LASTBET = bet
@@ -159,29 +165,102 @@ class Player():
     @property
     def COMBO(self) -> Combo:
         return Combo(hand=self.HAND, table=self.game.TABLE)
- 
-    def PowerCheck(self):
-        # TODO
-        if not self.COMBO:
-            pass
 
-        def CheckFlush():
-            pass
-        def CheckStraight():
-            pass
-        def CheckPair():
-            pass
-        def CheckTPlus():
-            pass
+    @property
+    def _power(self):
+        return self.PowerCheck()
+
+    def PowerCheck(self) -> int:
+        '''
+        :return: <int> range(0,100)
+        '''
+        hand = self.HAND
+        _power = 0
+        basic = sum([c.weight.number for c in hand.items])
+        #print(f'basic => {basic}')
+        _power += basic
+
         if self.game._stage < 2:
-            flush = CheckFlush()
-            stra = CheckStraight()
-            pair = CheckPair()
-            tplus = CheckTPlus()
+            c1, c2 = hand.items
+            # CheckFlush
+            if hand.type[-1] == 's':
+                random.seed(GetSeed())
+                flush = int(random.random()*20 + 10)
+                ##print(f'flush => {flush}')
+                _power += flush
+            # CheckStraight
+            if abs(c1.weight.number - c2.weight.number) < 5:
+                _power += 10
+            # CheckPair
+            if hand.is_pair:
+                _power += 20
+            # CheckTPlus
+            if all([c.weight.number > 8 for c in hand.items]):
+                print('all T+ =>')
+                p1 = int((c1.weight.number-8) * random.random()*3)
+                p2 =  int((c2.weight.number-8) * random.random()*3)
+                p3 = int(sum([c.weight.number*0x3c18/10000 for c in hand.items]))
+                #print(f'p1={p1} p2={p2} p3={p3}')
+                _power += p1 + p2 + p3
+            elif any([c.weight.number > 8 for c in hand.items]):
+                #print('any T+ =>')
+                tplus = int(max(c1,c2).weight.number * random.random()*10)
+                if tplus > 20:
+                    tplus = 20
+                elif tplus < 0:
+                    tplus = 10
+                #print(f'tplus => {tplus}')
+                if min(c1,c2).weight.number < 7:
+                    tminor = int(min(c1,c2).weight.number * random.random()*10)
+                    if tminor > 10:
+                        tminor = 10
+                    #print(f'tminor => {tminor}')
+                    _power -= tminor
+
+                _power += tplus
+                
         else:
-            pass
-        power = int(random.random() * 100)
-        return power
+            basic = int(self.COMBO.type * (self.Q + random.random()+1)) * 10
+            factor = 1
+            # distribute by COMBO.type
+            if self.COMBO.type == 1:
+                factor = 0.3
+            elif self.COMBO.type == 2:
+                factor = 0.6
+            elif self.COMBO.type == 3:
+                factor = 0.9
+            elif self.COMBO.type == 4:
+                factor = 1.5
+            elif self.COMBO.type == 5:
+                factor = 2
+            elif self.COMBO.type == 6:
+                factor = 3.2
+            elif self.COMBO.type == 7:
+                factor = 4.2
+            elif self.COMBO.type == 8:
+                factor = 5
+            elif self.COMBO.type == 9:
+                factor = 10
+            basic *= factor
+            #print(f'basic *= factor => {basic}')
+
+            #CheckDrawing #TODO
+            f = set([c.suit.number for c in  self.COMBO.cards.items])
+            if len(f) == 3:
+                print(f'drawing: 2 to flush')
+                basic += 5
+            elif len(f) == 2:
+                print(f'drawing: 1 to flush')
+                basic += 20
+            
+            _power += basic
+
+        if _power > 99:
+            _power = 99
+        elif _power < 1:
+            _power = 1
+        #modifier = 0.8
+        return _power
     
     def ChooseOpponent(self):
         opponent = random.choice(self.game.PLAYERS)
@@ -193,34 +272,34 @@ class Player():
         '''
         most parameters fine-tuning work here
         '''
-        if 0 < power < 12:
+        if 0 < power < 10:
             self.Fold()
-        elif 12 <= power < 27:
+        elif 10 <= power < 20:
             if not self.game.LASTBET:
                 self.Check()
             else:
                 self.Fold()
-        elif 27 <= power < 66:
+        elif 20 <= power < 66:
             q = random.random()
-            if q > 0.4:
+            if q > 0.3:
                 self.Call()
             else:
                 if not self.game.LASTBET:
                     self.Check()
                 else:
                     self.Fold()
-        elif 66 <= power < 88:
+        elif 66 <= power < 80:
             q = random.random()
-            if q > 0.6:
+            if q > 0.3:
                 self.Raise()
             else:
                 if not self.game.LASTBET:
                     self.Check()
                 else:
                     self.Call()
-        elif 88 <= power < 95:
+        elif 80 <= power < 90:
             self.Raise()
-        elif power >= 95:
+        elif power >= 90:
             self.logger.debug(f'power >= 94 => {power}')
             self.AllIn()
         else:
@@ -234,6 +313,7 @@ class Player():
                 self.AllIn()
             elif command == 'fold':
                 self.Fold()
+
             #DEBUG
             elif command == ':$cash':
                 self.CASH += self.game.BUYIN
@@ -246,31 +326,66 @@ class Player():
                 self.Decide()
             elif command == ':status':
                 #TODO
-                print(self.game.STATUS)
+                self.game.SCREEN.Table(self.game.STATUS, 'DEBUG')
                 self.Decide()
-            elif command == '下一局':
-                self.game.NewGame()
-            elif command == '离开':
-                self.game.Exit()
 
     @property
     def Q(self):
         '''
         #TODO different personalities return various Q types
         '''
-        return random.random()
+        # a simple sample here
+        factor = 1
+        pers = self.PERSONALITY
+        if pers == 'conservative':
+            factor = 0.7
+        elif pers == 'normal':
+            if random.random() > 0.5:
+                factor = 1.1
+            else:
+                factor = 0.9
+        elif pers == 'progressive':
+            factor = 1.3
+
+        return random.random() * factor
+
+    def CountDown(self, limit=10):
+        t = int(random.random()*limit + 3)
+        if t > limit:
+            t = limit
+        assert t <= limit
+        mins, secs = divmod(t, 60) 
+        delta = limit - secs
+        while t: 
+            timer = f'{secs + delta:02d} {self.NAME}正在决策...'
+            if self.COMBO:
+                debug = f'{self.COMBO} => {self._power}'
+            else:
+                debug = f'{self.HAND} => {self._power}'
+            #timer += debug
+            self.game.SCREEN.Timer(timer)
+            #print(timer, end="\r") 
+            s = 0.8 + random.random()/10
+            time.sleep(0.9) 
+            t -= 1
+            delta -= 1
 
     def Decide(self):
+        print(chr(27)+'[2j')
+        print('\033c')
+        print('\x1bc')
         if self.IS_AI and self.ONTABLE:
+            self.game.POOL.Show()
+            self.Tech()
             self.logger.debug(f'{self} 行动')
             self.logger.debug(f'{self.NAME}手牌：{self.HAND}')
             if not self.CASH:
                 self.logger.debug(f'{self.NAME}无筹码，跳过此轮')
             else:
-                self.game.SCREEN.Update(f'{self.NAME}正在决策...', 'title')
+                self.CountDown()
                 self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
 
-                power = self.PowerCheck() #TODO
+                power = self._power
                 self.logger.debug(f'Player.PowerCheck() => {power}')
 
                 lb = self.LASTBET
@@ -281,17 +396,24 @@ class Player():
                 self.logger.debug(f'game.LASTBET {glb}')
                 if not cmx:
                     # here is when self is 1st player to act
-                    # options: check, raise, allin, fold(extremly rare)
+                    # options: check, raise, allin, fold
                     if 46 <= power < 81:
                         # avoid `call` because nothing to call currently
                         q = self.Q
-                        if q < 0.5:
+                        if q < 0.4: #TODO
                             self.Check()
+                        else:
+                            self.Raise()
+                    elif 81 <= power < 95:
+                        self.Raise()
+                    elif power >= 95:
+                        q = self.Q
+                        if q > 0.6:
+                            self.AllIn()
                         else:
                             self.Raise()
                     else:
                         self.Check()
-                    #self.Action(power) #should be removed this line
                 else:
                     if self.LASTBET == self.game.POOL.CURRENTMAX:
                         self.logger.debug(f'self.LASTBET == self.game.POOL.CURRENTMAX {True}')
@@ -307,19 +429,16 @@ class Player():
                             self.Fold()
                     else:
                         self.Action(power)
-            s = random.random() + 0.4
-            time.sleep(s)
-            self.game.POOL.Show()
-            #input('\n\n\nPress ENTER to continue...\n')
         else:
             # human player starts deciding from here
             if self.ONTABLE:
+                #self.PowerCheck()
                 #self.logger.debug(f'game.LASTACTION {self.game.LASTACTION}')
                 self.game.POOL.Show()
                 self.game.SCREEN.Update(f'你的手牌：{self.HAND}', 'title')
 
                 if self.CASH:
-                    self.Tech()
+                    self.Tech(AI=False)
                     options = self.Options()
                     menu = Menu(options, self.game)
                     decision = menu.Show()
@@ -345,22 +464,27 @@ class Player():
                     options = ['check','raise','allin','fold',]
                 else:
                     options = ['call','raise','allin','fold',]
-        #debug
-        options += Menu.DEBUG
-
-        #self.logger.debug(f'options: {options}')
+        self.logger.debug(f'options: {options}')
         return options
 
-    def Tech(self):
-        rate = self.game.POOL.SUM/self.CASH
-        if rate:
-            content = f'你的筹码 ${self.CASH}\n当前下注 {self.game.POOL.CURRENTMAX}\n\
-底池 ${self.game.POOL.SUM}\n底池筹码比{rate:.2%}\n'
-            if self.game._stage >= 2:
-                content += (f'你的牌力 {self.COMBO}\n')
-                content += (f'当前听牌 {"#TODO"}')
+    def Tech(self, AI=True):
+        content = ''
+        if not AI:
+            rate = self.game.POOL.SUM/self.CASH
+            if rate:
+                content = f'底池 ${self.game.POOL.SUM}\n底池筹码比{rate:.2%}\n'
+                if self.game._stage >= 2:
+                    content += (f'你的牌力\n{self.COMBO}\n')
+                    #content += (f'self._power {self._power}\n')
+                    content += (f'当前听牌 {"#TODO"}\n')
+                    content += (f'风险 {"#TODO"}')
+            else:
+                content = f'你的筹码：${self.CASH}'
         else:
-            content = f'你的筹码：${self.CASH}'
+            face = random.choice(self.FACES)
+            #self.game.SCREEN.Update(self.FACES.index(face),'title')
+            content = f'微表情 {face}\n底  池 ${self.game.POOL.SUM}\n筹  码 ${self.CASH}'
+
         self.game.SCREEN.Update(content, 'tech', title='技术区')
 
     def Good(self):
@@ -407,8 +531,8 @@ class Player():
         self.logger.debug(f'{self.NAME}准备全下 ${bet}')
 
         # create side pool if necessary
-        if bet < self.game.POOL.CURRENTMAX:
-            self.SIDEPOOL = self.game.POOL.SidePool(self, bet)
+        #if bet < self.game.POOL.CURRENTMAX:
+        #    self.SIDEPOOL = self.game.POOL.SidePool(self, bet)
 
         self.Bet(bet)
         self.LASTACTION = 'All In'
@@ -438,6 +562,7 @@ class Player():
     def ShowHand(self):
         self.logger.debug(f'[Player] {self.NAME} [action] ShowHand')
         self.logger.info(f'{self} 手牌 {self.HAND}')
+        self.game.SCREEN.Update(f'{self} 手牌 {self.HAND}\n牌力 {self.COMBO}', 'tech')
 
     def BuyIn(self):
         self.logger.debug(f'[Player] {self.NAME} [action] BuyIn')
@@ -459,20 +584,20 @@ class Player():
         self.logger.debug(f'self.game.PLAYERS {self.game.PLAYERS}')
 
         if self.IS_AI:
-            if self.Q > 0.6: # may vary per personalities later
+            if self.Q > 0.5: # may vary per personalities later # TODO
                 self.BuyIn()
+                self.Talk('buyin')
             else:
                 self.game.WORLD.Add(self)
-                self.SCREEN.Update(f'{self.NAME}输光所有筹码，黯然离场😢')
+                self.game.SCREEN.Title(f'{self.NAME}输光所有筹码，黯然离场😢')
                 self.Talk('bye')
         else:
             print(f'筹码输光了，买入吗？')
-            options = [f'买入 ${self.game.BUIYIN}', '不了，到这吧']
-            options += Menu.DEBUG
+            options = [f'买入 ${self.game.BUYIN}', '不了，到这吧']
             menu = Menu(options, self.game)
-            decision = menu.show()
+            decision = menu.Show()
 
-            if decision == '对':
+            if decision == f'买入 ${self.game.BUYIN}':
                 self.BuyIn()
             else:
                 self.game.Exit()
